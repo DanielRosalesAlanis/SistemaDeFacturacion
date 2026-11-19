@@ -1,10 +1,10 @@
 # Sistema de Facturación y Servicios: Reporte de Avance (Revisión 1)
 
-> **Versión preliminar, 19 de noviembre de 2026. No es la versión final.**
+> **Versión preliminar, 19 de noviembre de 2026 (actualizada al cierre del día). No es la versión final.**
 > Optativa I · Bases de Datos en la Nube · Proyecto C · Entorno: AWS Academy Learner Lab
 > **Equipo 3:** Dana Bahena Díaz, Isaac Leonardo López Flores, Renata Lizbeth Ortiz Chávez, Daniel Rosales Alanis
 
-Sugerencia de ubicación en el repositorio: `docs/REPORTE_AVANCE.md`. Los diagramas usan **Mermaid**, que GitHub dibuja automáticamente al abrir el archivo.
+Los diagramas usan **Mermaid**, que GitHub dibuja automáticamente al abrir el archivo.
 
 ## Contenido
 1. [Resumen del avance](#1-resumen-del-avance)
@@ -24,24 +24,25 @@ Sugerencia de ubicación en el repositorio: `docs/REPORTE_AVANCE.md`. Los diagra
 
 ## 1. Resumen del avance
 
-La base de datos relacional está desplegada en Amazon RDS y probada (31 de 31 pruebas). Ya cumple el volumen que pide la rúbrica (100 servicios y 50 características) y el mínimo de 10 procedimientos (tiene 13). Frente a la rúbrica del Proyecto C faltan 2 tablas requeridas, DynamoDB, 3 de los 10 propósitos de procedimientos y la capa de aplicación con autenticación. Si se entregara hoy, la estimación interna es de **42 a 67 puntos de 100** (sección 2.3).
+La base de datos relacional está desplegada en Amazon RDS y probada (**63 de 63 pruebas**). Cumple el volumen que pide la rúbrica (100 servicios y 50 características), tiene las 8 tablas que nombra el Proyecto C (20 en total) y **cubre los 10 propósitos de procedimientos** con 21 SP. Faltan DynamoDB y la capa de aplicación: API con autenticación JWT en API Gateway y Lambda, y el frontend conectado. Si se entregara hoy, la estimación interna es de **54 a 72 puntos de 100** (sección 2.3).
 
 | Área | Estado | Evidencia principal |
 | --- | --- | --- |
-| Modelo de datos | Completado | Diagrama ER de 10 tablas con justificación por tabla (sección 4) |
-| Base de datos y reglas de negocio | Completado | `facturacion_completo.sql`: 10 tablas, 13 SP, 3 funciones, 5 vistas |
+| Modelo de datos | Completado | 20 tablas: las 10 del diagrama ER del equipo + 10 de extensión (sección 4) |
+| Base de datos y reglas de negocio | Completado | `database/`: 21 SP, 11 funciones, 11 vistas, 1 trigger, reglas RN-01 a RN-33 |
 | Despliegue en la nube | Completado | Instancia `db-billing-postgres` en Amazon RDS, PostgreSQL 18.3 |
-| Pruebas | Completado | `resultado_pruebas.txt`: 31 OK, 0 fallas |
-| Control de versiones | En progreso | Repositorio Git local, commit `b40e7b6`; falta subirlo a GitHub |
-| Interfaz | Prototipo | Demo navegable con las mismas reglas, sin conexión a la base |
-| API y aplicación conectada | Pendiente | Diseñada (17 endpoints), sin construir |
+| Despliegue automatizado | Completado | `scripts/cargar_bd.ps1` y `scripts/cargar_bd.sh` leen la conexión de `.env` |
+| Pruebas | Completado | `database/resultado_pruebas.txt`: 63 OK, 0 fallas |
+| Control de versiones | En progreso | Repositorio Git local con historial por etapa; falta subirlo a GitHub |
+| Interfaz | Prototipo | Demo navegable con las reglas originales, sin conexión a la base |
+| API y aplicación conectada | Pendiente | Diseñada; sin construir |
 | DynamoDB, JWT, API Gateway/Lambda | Pendiente | Requeridos por la rúbrica |
 
 ---
 
 ## 2. Evaluación contra la rúbrica oficial
 
-Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales*, Proyecto C: Sistema de Facturación y Servicios.
+Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* (`docs/rubrica_proyecto_final.pdf`), Proyecto C: Sistema de Facturación y Servicios.
 
 ### 2.1 Requisitos específicos del Proyecto C
 
@@ -49,54 +50,54 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales*,
 | --- | --- | --- |
 | 100 servicios | ✅ Cumplido | 100 servicios en 10 categorías, cargados con SP02 |
 | 50 características configurables | ✅ Cumplido | 50 características tipificadas y 1,220 valores en `servicio_caracteristicas` |
-| Mínimo 8 tablas en RDS | ✅ En número (10) | Faltan 2 de las tablas que la rúbrica nombra |
+| Mínimo 8 tablas en RDS | ✅ Cumplido (20) | Las 10 del diagrama + 10 de extensión |
 | Clientes, Facturas, Detalle_Factura, Servicios, Características_Servicio, Pagos | ✅ Cumplido | `clientes`, `facturas`, `detalle_factura`, `servicios`, `caracteristicas` + `servicio_caracteristicas`, `pagos` |
-| Impuestos_Histórico | ❌ Falta | El IVA está fijo en `fn_tasa_iva()` (16 %); no hay historial de tasas ni retenciones |
-| Usuarios_Roles | ⚠️ Parcial | `empleados.puesto` funciona como rol; no hay usuarios con credenciales ni tabla de roles |
+| Impuestos_Histórico | ✅ Cumplido | `impuestos_historico` (IVA 15 % → 16 %, retenciones de ISR e IVA, con vigencia) y `factura_impuestos` |
+| Usuarios_Roles | ✅ Cumplido | `usuarios` (hash bcrypt, bloqueo por intentos) y `roles`; los permisos de los SP salen del rol |
 | DynamoDB (auditoría, sesiones, carritos o eventos) | ❌ Falta | Ninguna tabla de DynamoDB todavía |
-| Mínimo 10 SP en RDS | ✅ En número (13) | La rúbrica pide 10 propósitos específicos (ver 2.2) |
+| Mínimo 10 SP en RDS | ✅ Cumplido (21) | Los 10 propósitos cubiertos (ver 2.2) |
 
 ### 2.2 Los 10 procedimientos que pide la rúbrica
 
-| # | Propósito requerido | Implementado hoy | Estado |
+| # | Propósito requerido | Implementación | Estado |
 | --- | --- | --- | --- |
 | 1 | Generación e iteración atómica de folios | SP06 `sp_crear_factura` con `pg_advisory_xact_lock` | ✅ Cumplido |
-| 2 | Cálculo de subtotal, IVA y retenciones | SP07 `sp_recalcular_totales` (subtotal e IVA) | ⚠️ Faltan retenciones |
-| 3 | Descuentos por cliente o volumen | SP08 aplica un % capturado por renglón (0 a 50 %) | ⚠️ Falta la regla automática |
-| 4 | Cancelación formal y reversión contable | SP13 cancela facturas; SP12 revierte pagos | ⚠️ Falta el asiento de reversión |
-| 5 | Cierre y consolidado fiscal diario o mensual | — | ❌ Falta |
-| 6 | Validación de estados de pago | SP11 y SP12 | ✅ Cumplido |
-| 7 | Reporte de antigüedad de saldos | `vw_facturas` calcula días de atraso | ⚠️ Faltan los rangos de antigüedad |
-| 8 | Estructura para comprobante o timbrado | — | ❌ Falta |
-| 9 | Asignación masiva de características | SP03 asigna una a la vez | ⚠️ Falta la versión masiva |
-| 10 | Auditoría de cambios en tarifas | SP04 valida el cambio, pero no lo registra | ❌ Falta |
+| 2 | Cálculo de subtotal, IVA y retenciones | SP07 `sp_recalcular_totales`: tasas vigentes de `impuestos_historico`; retenciones de ISR 10 % e IVA 2/3 según `condiciones_cliente` | ✅ Cumplido |
+| 3 | Descuentos por cliente o volumen | `fn_descuento_automatico` en SP08; SP15 `sp_aplicar_descuentos` | ✅ Cumplido |
+| 4 | Cancelación formal y reversión contable | SP13 y SP12 llaman a SP16 `sp_contabilizar`, que genera la póliza inversa | ✅ Cumplido |
+| 5 | Cierre y consolidado fiscal diario o mensual | SP17 `sp_cierre_fiscal` → `cierres_fiscales` | ✅ Cumplido |
+| 6 | Validación de estados de pago | SP11 y SP12 (RN-19 a RN-23) | ✅ Cumplido |
+| 7 | Reporte de antigüedad de saldos | `fn_antiguedad_saldos(fecha_corte)` y `vw_antiguedad_saldos` (por vencer, 1–30, 31–60, 61–90, más de 90) | ✅ Cumplido |
+| 8 | Estructura para comprobante o timbrado | SP18 `sp_generar_comprobante` → JSON CFDI 4.0 en `comprobantes` | ✅ Cumplido (el timbrado con un PAC queda fuera de alcance) |
+| 9 | Asignación masiva de características | SP19 `sp_asignar_caracteristicas_masivo` (arreglo JSON, todo o nada) | ✅ Cumplido |
+| 10 | Auditoría de cambios en tarifas | Trigger `tg_auditar_tarifa` → `auditoria_tarifas`; registra también un `UPDATE` directo | ✅ Cumplido |
 
-**Resultado:** 2 cumplidos, 5 parciales y 3 faltantes.
+**Resultado:** 10 de 10 cumplidos. La antigüedad de saldos es una función y no un procedimiento porque devuelve un conjunto de filas; en PostgreSQL un `PROCEDURE` no puede devolver una tabla.
 
 ### 2.3 Autoevaluación por rubro (estimación interna, no oficial)
 
 | Rubro | Peso | Nivel actual | Puntos estimados | Qué lo sube a Excelente |
 | --- | --- | --- | --- | --- |
-| 1. Diseño, modelado y rigor en BD | 30 | Suficiente | 18–25 | Impuestos_Histórico, Usuarios_Roles, esquema de DynamoDB con índices |
-| 2. Arquitectura en AWS y Learner Lab | 25 | Insuficiente a suficiente | 8–14 | API Gateway + Lambda con LabRole, DynamoDB, variables de entorno, apagar RDS fuera de horario |
-| 3. Lógica de negocio y SP | 20 | Suficiente | 11–16 | Completar los 10 propósitos y llamarlos desde la aplicación |
-| 4. Ciberseguridad, RBAC y OWASP | 15 | Insuficiente | 3–7 | JWT, bcrypt o Argon2, roles en la API, pruebas contra inyección SQL y XSS |
-| 5. Frontend, documentación y Git | 10 | Insuficiente | 2–5 | Frontend conectado, GitHub con commits de los 4 integrantes, OpenAPI, README |
-| **Total** | **100** | | **42–67** | |
+| 1. Diseño, modelado y rigor en BD | 30 | Suficiente a excelente | 24–28 | Esquema de DynamoDB con sus índices; ER actualizado en draw.io |
+| 2. Arquitectura en AWS y Learner Lab | 25 | Insuficiente a suficiente | 10–14 | API Gateway + Lambda con LabRole, DynamoDB, apagar RDS fuera de horario |
+| 3. Lógica de negocio y SP | 20 | Suficiente | 14–16 | Llamar los SP desde la aplicación (hoy sólo desde psql y pruebas) |
+| 4. Ciberseguridad, RBAC y OWASP | 15 | Insuficiente a suficiente | 4–8 | JWT en la API, roles en cada endpoint, pruebas contra inyección SQL y XSS |
+| 5. Frontend, documentación y Git | 10 | Insuficiente a suficiente | 2–6 | Frontend conectado, GitHub con commits de los 4 integrantes, OpenAPI |
+| **Total** | **100** | | **54–72** | |
 
 ### 2.4 Checklist de entregables del repositorio
 
 | Entregable | Estado |
 | --- | --- |
-| `/database`: DDL y DML | ✅ Listo en `db/facturacion_completo.sql`; mover a `/database` |
-| `/database`: script independiente de Stored Procedures | ⚠️ Por separar |
+| `/database`: DDL y DML | ✅ `database/01_esquema.sql` y `database/03_datos.sql` |
+| `/database`: script independiente de Stored Procedures | ✅ `database/02_procedimientos.sql` |
 | `/database`: esquema JSON de DynamoDB e índices | ❌ Falta |
-| `/docs`: diagrama ER actualizado | ✅ Sección 4 de este archivo |
+| `/docs`: diagrama ER actualizado | ✅ Sección 4 de este archivo (20 tablas) |
 | `/docs`: diagrama de arquitectura AWS | ✅ Actual y objetivo en la sección 3 |
-| `/docs`: colección de Postman u OpenAPI | ❌ Falta |
-| Código Python (FastAPI o Lambda) y frontend | ❌ Falta (sólo prototipo) |
-| `README.md` con instrucciones de ejecución y conexión a AWS | ❌ Falta |
-| Repositorio en GitHub | ❌ Falta (local, 1 commit) |
+| `/docs`: colección de Postman u OpenAPI | ❌ Falta (se genera con la API) |
+| Código Python (FastAPI o Lambda) y frontend | ❌ Falta (sólo prototipo en `frontend/`) |
+| `README.md` con instrucciones de ejecución y conexión a AWS | ✅ Configuración, despliegue, pruebas y pgAdmin |
+| Repositorio en GitHub | ❌ Falta (sólo repositorio local) |
 
 ---
 
@@ -107,19 +108,21 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales*,
 ```mermaid
 flowchart LR
     subgraph Local["Equipo de desarrollo"]
-        GIT["Repositorio Git<br/>commit b40e7b6 · scripts .sql"]
-        CLI["pgAdmin / psql<br/>consultas, demo y pruebas"]
-        API["API REST (FastAPI)<br/>PENDIENTE · 17 endpoints"]:::pend
+        GIT["Repositorio Git<br/>database/ · scripts/ · docs/"]
+        DEP["scripts/cargar_bd<br/>despliegue + 63 pruebas"]
+        CLI["pgAdmin / psql<br/>consultas y demo"]
+        API["API REST (FastAPI)<br/>PENDIENTE"]:::pend
         UI["Interfaz web<br/>prototipo sin conexión"]
     end
     subgraph AWS["AWS · us-east-1 (AWS Academy Learner Lab)"]
         subgraph VPC["VPC vpc-08c8747b2dfc49016"]
             subgraph SG["Security group secg-db-laboratory<br/>5432 sólo desde la IP del equipo"]
-                RDS[("Amazon RDS · db-billing-postgres<br/>PostgreSQL 18.3 · db.t3.micro · 20 GiB gp2<br/>base billing · esquema facturacion<br/>10 tablas · 13 SP · 3 funciones · 5 vistas")]
+                RDS[("Amazon RDS · db-billing-postgres<br/>PostgreSQL 18.3 · db.t3.micro · 20 GiB gp2<br/>base billing · esquema facturacion<br/>20 tablas · 21 SP · 11 funciones · 11 vistas")]
             end
         end
     end
-    GIT -->|carga de scripts| CLI
+    GIT --> DEP
+    DEP -->|SSL verify-full · 5432| RDS
     CLI -->|SSL verify-full · 5432| RDS
     UI -.->|se conectará| API
     API -.-> RDS
@@ -145,12 +148,12 @@ flowchart TB
     fact["Facturista<br/>[Persona]"]
     caj["Cajero<br/>[Persona]"]
     ger["Gerente<br/>[Persona]"]
-    sys["Sistema de Facturación y Servicios<br/>[Sistema]<br/>Catálogo, facturas, cobranza y reportes"]
+    sys["Sistema de Facturación y Servicios<br/>[Sistema]<br/>Catálogo, facturas, cobranza, contabilidad y reportes"]
     sat["Proveedor de timbrado (PAC/SAT)<br/>[Sistema externo · fuera de alcance]"]
     fact -->|crea y emite facturas| sys
     caj -->|registra pagos| sys
-    ger -->|cancela, autoriza precios, consulta reportes| sys
-    sys -.->|estructura del comprobante| sat
+    ger -->|cancela, autoriza precios, cierra periodos, consulta reportes| sys
+    sys -.->|estructura del comprobante CFDI 4.0| sat
 ```
 
 ### 3.4 Servicios y herramientas
@@ -160,9 +163,11 @@ flowchart TB
 | Amazon RDS for PostgreSQL 18.3 | Base de datos (`db-billing-postgres`, db.t3.micro, 20 GiB gp2, us-east-1) | Base administrada con respaldos, cifrado y parches; cumple el límite del Learner Lab |
 | Amazon VPC y Security Groups | Red y firewall de la instancia | El puerto 5432 sólo acepta la IP del equipo |
 | AWS Academy Learner Lab | Cuenta y consola de AWS | Entorno oficial de la materia (crédito de 100 USD) |
-| PostgreSQL (PL/pgSQL) | Tablas, 13 SP, 3 funciones, 5 vistas | Procedimientos con transacciones y control de errores por regla |
-| PostgreSQL 16 local | Validación previa y plan B para la demo | Mismo comportamiento sin depender de la red |
+| PostgreSQL (PL/pgSQL) | Tablas, 21 SP, 11 funciones, 11 vistas, 1 trigger | Procedimientos con transacciones y control de errores por regla |
+| PostgreSQL 18.7 local | Plan B para la demo (servidor local instalado con winget) | Mismo comportamiento sin depender de la red; antes se validó también en 16.15 |
 | pgAdmin 4 y psql | Carga de scripts, consultas y demo | Clientes oficiales de PostgreSQL |
+| PowerShell y Bash | Scripts de despliegue `scripts/cargar_bd.*` | Carga reproducible: leen `.env`, protegen contra borrados y cuentan pruebas |
+| Python 3 y bcrypt | Hash de las contraseñas de las cuentas de demostración | La base nunca recibe contraseñas en texto plano |
 | Git | Control de versiones | Historial y trabajo coordinado |
 | draw.io | Modelo entidad-relación original | Diagrama editable por el equipo |
 | Claude (asistente de IA) | Apoyo en especificaciones, scripts, pruebas, prototipo y documentación | El equipo revisó y validó cada entregable |
@@ -172,7 +177,7 @@ flowchart TB
 
 ## 4. Modelo de datos
 
-10 tablas en tercera forma normal y 9 llaves foráneas. Se implementó sin cambiar nombres ni campos del diagrama original del Equipo 3.
+20 tablas y 22 llaves foráneas. Las tablas 1 a 10 son las del diagrama original del Equipo 3, sin cambiar nombres ni campos. Las tablas 11 a 20 extienden el modelo para cubrir la rúbrica del Proyecto C.
 
 ### 4.1 Diagrama entidad-relación
 
@@ -187,6 +192,19 @@ erDiagram
     empleados ||--o{ facturas : elabora
     facturas ||--o{ pagos : "se liquida con"
     metodos_pago ||--o{ pagos : "se usa en"
+    roles ||--o{ usuarios : asigna
+    empleados ||--o| usuarios : "accede con"
+    clientes ||--o| condiciones_cliente : pacta
+    facturas ||--o{ factura_impuestos : desglosa
+    impuestos_historico ||--o{ factura_impuestos : "aporta la tasa"
+    empleados ||--o{ impuestos_historico : registra
+    servicios ||--o{ auditoria_tarifas : "cambia de precio"
+    empleados ||--o{ auditoria_tarifas : autoriza
+    facturas ||--o{ movimientos_contables : genera
+    pagos ||--o{ movimientos_contables : genera
+    empleados ||--o{ movimientos_contables : registra
+    empleados ||--o{ cierres_fiscales : cierra
+    facturas ||--o| comprobantes : "se timbra como"
 
     categorias_servicio {
         serial id_categoria PK
@@ -249,8 +267,8 @@ erDiagram
         timestamp fecha_emision
         timestamp fecha_vencimiento
         decimal subtotal
-        decimal impuestos
-        decimal total
+        decimal impuestos "IVA trasladado"
+        decimal total "subtotal + IVA - retenciones"
         varchar estado "BORRADOR, EMITIDA, PAGADA, CANCELADA"
     }
     detalle_factura {
@@ -271,6 +289,87 @@ erDiagram
         varchar referencia
         varchar estado "APLICADO, CANCELADO"
     }
+    roles {
+        serial id_rol PK
+        varchar nombre_rol UK
+        varchar descripcion
+    }
+    usuarios {
+        serial id_usuario PK
+        int id_empleado FK "UK"
+        int id_rol FK
+        varchar nombre_usuario UK
+        varchar contrasena_hash "bcrypt o Argon2id"
+        boolean estado
+        int intentos_fallidos
+        timestamp bloqueado_hasta
+        timestamp ultimo_acceso
+    }
+    impuestos_historico {
+        serial id_impuesto PK
+        varchar clave "IVA, ISR"
+        varchar tipo "TRASLADO, RETENCION"
+        decimal tasa
+        date vigente_desde
+        date vigente_hasta "NULL = vigente"
+        int id_empleado FK
+    }
+    factura_impuestos {
+        int id_factura PK, FK
+        int id_impuesto PK, FK
+        decimal base
+        decimal importe
+    }
+    condiciones_cliente {
+        int id_cliente PK, FK
+        decimal descuento_pct "0 a 50"
+        boolean retiene_isr
+        boolean retiene_iva
+        varchar notas
+    }
+    descuentos_volumen {
+        serial id_descuento PK
+        int cantidad_minima UK
+        decimal descuento_pct
+        boolean estado
+    }
+    auditoria_tarifas {
+        serial id_auditoria PK
+        int id_servicio FK
+        decimal precio_anterior
+        decimal precio_nuevo
+        int id_empleado FK "NULL si fue fuera del SP"
+        varchar usuario_bd
+        timestamp fecha_cambio
+    }
+    movimientos_contables {
+        serial id_movimiento PK
+        int id_factura FK
+        int id_pago FK
+        varchar evento "EMISION, COBRO, CANCELACION_*"
+        varchar cuenta
+        decimal cargo
+        decimal abono
+        int id_empleado FK
+        timestamp fecha
+    }
+    cierres_fiscales {
+        serial id_cierre PK
+        varchar tipo "DIARIO, MENSUAL"
+        date periodo_inicio
+        date periodo_fin
+        int facturas_emitidas
+        decimal total_facturado
+        decimal total_cobrado
+        int id_empleado FK
+    }
+    comprobantes {
+        int id_factura PK, FK
+        varchar version_cfdi "4.0"
+        jsonb contenido
+        varchar estado "PENDIENTE_TIMBRADO, TIMBRADO, CANCELADO"
+        uuid uuid_fiscal UK
+    }
 ```
 
 ### 4.2 Justificación por tabla
@@ -282,40 +381,57 @@ erDiagram
 | caracteristicas | Diccionario de 50 especificaciones con tipo de dato y unidad, para que «Garantía» signifique y se mida igual en todo el sistema |
 | servicio_caracteristicas | Resuelve la relación N:M y guarda el valor, que es atributo de la relación |
 | clientes | Un cliente tiene muchas facturas; sus datos fiscales se capturan una vez |
-| empleados | Trazabilidad de quién elaboró cada factura y permisos por puesto |
+| empleados | Trazabilidad de quién elaboró cada factura |
 | metodos_pago | Catálogo fijo que evita variantes escritas a mano que romperían los reportes |
 | facturas | Encabezado del comprobante: fechas, totales y estado; de él dependen renglones y pagos |
 | detalle_factura | Varios conceptos por factura sin violar 1FN; conserva el precio histórico |
 | pagos | Una factura puede liquidarse en varios abonos; la suma contra el total da el saldo |
+| roles | Permisos del sistema; `fn_empleado_puede` los consulta en cada SP |
+| usuarios | Credenciales separadas del empleado: hash de contraseña, bloqueo e intentos. El puesto es el cargo; el rol es el permiso |
+| impuestos_historico | Las tasas cambian con la ley; cada factura usa la vigente a su fecha de emisión sin reescribir el pasado |
+| factura_impuestos | Desglose N:M entre facturas e impuestos (traslados y retenciones), con la misma forma que el nodo Impuestos del CFDI |
+| condiciones_cliente | Relación 1:0..1 con clientes: sólo algunos tienen convenio o retienen; evita columnas nulas en `clientes` |
+| descuentos_volumen | Reglas de descuento por cantidad que se cambian sin tocar código |
+| auditoria_tarifas | Bitácora inmutable de cambios de precio con quién y cuándo |
+| movimientos_contables | Pólizas de doble partida; una cancelación agrega la póliza inversa y nunca borra |
+| cierres_fiscales | Fotografía de las cifras de un periodo cerrado |
+| comprobantes | Estructura CFDI generada por factura, con su estado de timbrado |
 
 ### 4.3 Normalización
 
-- **1FN:** un valor por celda. Conceptos en `detalle_factura` y valores de características en `servicio_caracteristicas`.
-- **2FN:** llaves primarias simples, así que no hay dependencias parciales.
-- **3FN:** sin dependencias transitivas. Categoría, cliente, empleado y método de pago se referencian por FK.
-- **Desnormalización deliberada:** `detalle_factura.precio_unitario` copia el precio al momento de la venta. Los totales se recalculan siempre desde el detalle con un SP, y el saldo no se guarda: se calcula.
+- **1FN:** un valor por celda. Conceptos en `detalle_factura`, valores de características en `servicio_caracteristicas` e impuestos de cada factura en `factura_impuestos`.
+- **2FN:** las llaves compuestas (`factura_impuestos`) no tienen dependencias parciales: base e importe dependen de la factura y del impuesto juntos.
+- **3FN:** sin dependencias transitivas. La tasa no se copia a `factura_impuestos`, porque se lee de `impuestos_historico` por FK. La variación porcentual de una tarifa se calcula en `vw_auditoria_tarifas`.
+- **Desnormalización deliberada:**
+  - `detalle_factura.precio_unitario` copia el precio al momento de la venta.
+  - `facturas.subtotal`, `impuestos` y `total` se recalculan siempre desde el detalle con SP07.
+  - `cierres_fiscales` congela las cifras al cerrar el periodo.
+  - El saldo de una factura no se guarda: se calcula.
 
 ### 4.4 Índices
 
-`ix_servicios_categoria`, `ix_sc_caracteristica`, `ix_facturas_cliente`, `ix_facturas_estado`, `ix_detalle_factura`, `ix_pagos_factura`, además de los índices únicos de `codigo_servicio`, `identificacion_fiscal`, `folio`, `nombre_metodo`, `correo` y del par `(id_servicio, id_caracteristica)`.
+52 índices, contando los de llaves primarias y únicas:
+- **Llaves foráneas:** `ix_servicios_categoria`, `ix_sc_caracteristica`, `ix_facturas_cliente`, `ix_facturas_empleado`, `ix_detalle_factura`, `ix_detalle_servicio`, `ix_pagos_factura`, `ix_pagos_metodo`, `ix_factura_impuestos_impuesto`, `ix_mov_factura` y `ix_mov_pago` (parcial).
+- **Consultas frecuentes:** `ix_facturas_estado`, `ix_facturas_emision` y `ix_pagos_fecha` para el cierre fiscal; `ix_facturas_vencimiento` (parcial sobre facturas EMITIDA) para la antigüedad de saldos; `ix_auditoria_servicio`.
+- **Reglas de unicidad:** `uq_impuesto_abierto` (parcial: una sola tasa vigente por impuesto y tipo) y `uq_cierre_periodo`, además de los únicos de `codigo_servicio`, `identificacion_fiscal`, `folio`, `nombre_usuario` y el par `(id_servicio, id_caracteristica)`.
 
 ---
 
 ## 5. Lógica de negocio
 
-24 reglas (RN-01 a RN-24) viven en 13 procedimientos almacenados. Si una regla falla, el SP lanza un error con su código y la base revierte la operación completa.
+33 reglas (RN-01 a RN-33) viven en 21 procedimientos almacenados. Si una regla falla, el SP lanza un error con su código y la base revierte la operación completa.
 
 ### 5.1 Ciclo de vida de la factura
 
 ```mermaid
 stateDiagram-v2
     [*] --> BORRADOR: SP06 sp_crear_factura (folio atómico)
-    BORRADOR --> BORRADOR: SP08 / SP09 agregar o quitar conceptos
-    BORRADOR --> EMITIDA: SP10 sp_emitir_factura (RN-16, RN-17, RN-18)
-    EMITIDA --> EMITIDA: SP11 abono parcial
+    BORRADOR --> BORRADOR: SP08 / SP09 / SP15 conceptos y descuentos
+    BORRADOR --> EMITIDA: SP10 sp_emitir_factura (RN-16 a RN-18) + póliza de emisión
+    EMITIDA --> EMITIDA: SP11 abono parcial + póliza de cobro
     EMITIDA --> PAGADA: SP11 abono que deja saldo en cero
-    PAGADA --> EMITIDA: SP12 sp_cancelar_pago (sólo Gerente)
-    EMITIDA --> CANCELADA: SP13 sp_cancelar_factura (sin pagos, sólo Gerente)
+    PAGADA --> EMITIDA: SP12 sp_cancelar_pago (sólo Gerente) + póliza inversa
+    EMITIDA --> CANCELADA: SP13 sp_cancelar_factura (sin pagos, sólo Gerente) + póliza inversa
     CANCELADA --> [*]
 ```
 
@@ -339,6 +455,7 @@ sequenceDiagram
     F->>UI: Emitir a 30 días
     UI->>API: POST /facturas/7/emitir
     API->>DB: CALL sp_emitir_factura(7, 30)
+    Note over DB: póliza EMISION (Clientes = Ingresos + IVA)
     API->>DDB: PutItem evento FACTURA_EMITIDA
     C->>UI: Registrar pago SPEI
     UI->>API: POST /facturas/7/pagos (JWT rol Cajero)
@@ -347,7 +464,7 @@ sequenceDiagram
         DB-->>API: ERROR RN-21 monto inválido
         API-->>UI: HTTP 422 con el mensaje RN-21
     else válido
-        DB-->>API: p_id_pago, factura PAGADA
+        DB-->>API: p_id_pago, factura PAGADA, póliza COBRO
         API-->>UI: HTTP 201
     end
 ```
@@ -357,68 +474,95 @@ sequenceDiagram
 | Módulo | Procedimientos | Reglas |
 | --- | --- | --- |
 | Clientes | SP01 `sp_registrar_cliente` | RN-01 RFC válido · RN-02 RFC único · RN-03 correo y apellido |
-| Catálogo | SP02 `sp_registrar_servicio`, SP03 `sp_asignar_caracteristica`, SP04 `sp_actualizar_precio`, SP05 `sp_cambiar_estado_servicio` | RN-04 a RN-09 |
-| Facturación | SP06 `sp_crear_factura`, SP07 `sp_recalcular_totales`, SP08 `sp_agregar_detalle`, SP09 `sp_eliminar_detalle`, SP10 `sp_emitir_factura` | RN-10 a RN-18 |
+| Catálogo | SP02 `sp_registrar_servicio`, SP03 `sp_asignar_caracteristica`, SP04 `sp_actualizar_precio`, SP05 `sp_cambiar_estado_servicio`, SP19 `sp_asignar_caracteristicas_masivo` | RN-04 a RN-09 · RN-25 auditoría · RN-31 asignación masiva |
+| Facturación | SP06 `sp_crear_factura`, SP07 `sp_recalcular_totales`, SP08 `sp_agregar_detalle`, SP09 `sp_eliminar_detalle`, SP10 `sp_emitir_factura`, SP15 `sp_aplicar_descuentos` | RN-10 a RN-18 · RN-26 descuentos |
+| Impuestos | SP14 `sp_registrar_tasa_impuesto` | RN-27 tasas con vigencia y retenciones |
 | Cobranza | SP11 `sp_registrar_pago`, SP12 `sp_cancelar_pago`, SP13 `sp_cancelar_factura` | RN-19 a RN-24 |
+| Contabilidad y cierre | SP16 `sp_contabilizar`, SP17 `sp_cierre_fiscal` | RN-28 pólizas balanceadas · RN-29 cierre |
+| Comprobante | SP18 `sp_generar_comprobante` | RN-30 |
+| Seguridad | SP20 `sp_registrar_usuario`, SP21 `sp_registrar_intento_acceso` | RN-32 usuarios y roles · RN-33 bloqueo por intentos |
 
-Funciones: `fn_saldo_factura`, `fn_empleado_puede`, `fn_tasa_iva`.
-Vistas: `vw_catalogo_servicios`, `vw_ficha_servicio`, `vw_facturas`, `vw_ventas_categoria`, `vw_cobranza_metodo`.
+- **Funciones:** `fn_saldo_factura`, `fn_empleado_puede`, `fn_tasa_impuesto`, `fn_tasa_iva`, `fn_descuento_automatico`, `fn_antiguedad_saldos`, `fn_credenciales_usuario`, `fn_datos_emisor`, `fn_fecha_local`, `fn_hoy` y la del trigger `fn_tg_auditar_tarifa`.
+- **Vistas:** `vw_catalogo_servicios`, `vw_ficha_servicio`, `vw_facturas`, `vw_ventas_categoria`, `vw_cobranza_metodo`, `vw_antiguedad_saldos`, `vw_auditoria_tarifas`, `vw_polizas`, `vw_balanza`, `vw_usuarios` y `vw_impuestos`.
 
-### 5.4 Permisos por puesto
+### 5.4 Permisos por rol
 
-| Puesto | Puede |
+Los permisos se leen del **rol de la cuenta de usuario**, no del puesto. Una cuenta desactivada pierde sus permisos aunque el empleado siga activo.
+
+| Rol | Puede |
 | --- | --- |
-| Gerente | Todo, incluidas cancelaciones y cambios de precio mayores a ±30 % |
-| Facturista | Crear, editar y emitir facturas |
+| Gerente | Todo: cancelaciones, precios con variación mayor a ±30 %, tasas de impuestos, cierres fiscales y alta de usuarios |
+| Facturista | Crear, editar y emitir facturas; cambiar tarifas hasta ±30 % |
 | Cajero | Registrar pagos |
 | Auxiliar | Sólo consultar |
 
 ### 5.5 Fórmulas
 
-- Renglón: `descuento = cantidad × precio × % / 100`; `subtotal = cantidad × precio − descuento`
-- Factura: `impuestos = subtotal × 0.16`; `total = subtotal + impuestos`
-- `saldo = total − Σ pagos APLICADOS`
+- **Descuento del renglón:** `% aplicado = mayor(capturado, convenio del cliente, descuento por volumen)`.
+  - Por volumen: 3 % desde 10 unidades, 5 % desde 24 y 8 % desde 50.
+  - `descuento = cantidad × precio × % / 100`; `subtotal = cantidad × precio − descuento`.
+- **Factura:**
+  - `IVA = subtotal × tasa vigente`, hoy 0.16.
+  - Si el cliente retiene, se aplica ISR 10 % y dos terceras partes del IVA (0.106667).
+  - `total = subtotal + IVA − retenciones`.
+- **Saldo:** `saldo = total − Σ pagos APLICADOS`.
+- **Pólizas:**
+  - Emisión: cargo a Clientes (y a Impuestos retenidos), abono a Ingresos y a IVA trasladado.
+  - Cobro: cargo a Caja o Bancos, abono a Clientes.
+  - Cancelación: la póliza inversa.
 
 ---
 
 ## 6. Pruebas y evidencias
 
-Carga en Amazon RDS (PostgreSQL 18.3, SSL `verify-full`) el 19 de noviembre de 2026: sin errores y sin modificar el script. Antes se validó en PostgreSQL 16.15 local.
+Carga en Amazon RDS (PostgreSQL 18.3, SSL `verify-full`) el 19 de noviembre de 2026 con `scripts/cargar_bd.ps1`, sin errores. La versión inicial de 10 tablas se validó antes en PostgreSQL 16.15 local.
 
 ### 6.1 Verificación de mínimos en RDS
 
 | Requisito | Obtenido | Mínimo |
 | --- | --- | --- |
-| Tablas | 10 | 8 |
-| Procedimientos almacenados | 13 | 10 |
+| Tablas | 20 | 8 |
+| Procedimientos almacenados | 21 | 10 |
+| Funciones | 11 | — |
+| Vistas | 11 | — |
 | Servicios | 100 | 100 |
 | Características | 50 | 50 |
 | Valores servicio-característica | 1,220 | — |
 
-### 6.2 Pruebas de reglas de negocio (`facturacion_pruebas.sql`)
+### 6.2 Pruebas automatizadas (`database/04_pruebas.sql`)
+
+Hay dos tipos de prueba: las de **rechazo** comprueban que una operación inválida falle con su regla, y las de **cálculo** comprueban un resultado exacto. Cada prueba corre en una subtransacción y no deja datos.
 
 | Módulo | Pruebas | Reglas verificadas | Resultado |
 | --- | --- | --- | --- |
 | Clientes | 4 | RN-01 a RN-03 | 4 OK |
-| Catálogo | 10 | RN-04 a RN-09 | 10 OK |
-| Facturación | 9 | RN-10, RN-12 a RN-14, RN-16 a RN-18 | 9 OK |
+| Catálogo y tarifas | 12 | RN-04 a RN-09, RN-25 | 12 OK |
+| Facturación y descuentos | 12 | RN-10, RN-12 a RN-14, RN-16 a RN-18, RN-26 | 12 OK |
+| Impuestos y retenciones | 5 | RN-27 | 5 OK |
 | Cobranza | 8 | RN-19 a RN-21, RN-23, RN-24 | 8 OK |
-| **Total** | **31** | | **31 OK, 0 fallas** |
+| Contabilidad, cierre y comprobante | 10 | RN-28 a RN-30 | 10 OK |
+| Usuarios y accesos | 7 | RN-10 (cuenta inactiva), RN-32, RN-33 | 7 OK |
+| Asignación masiva (atomicidad) | 5 | RN-06, RN-31 | 5 OK |
+| **Total** | **63** | | **63 OK, 0 fallas** |
 
-Las reglas que se cumplen al aceptar una operación (RN-11, RN-15 y RN-22) se comprueban con los datos semilla, que se cargan con los mismos SP.
+Ejemplos de pruebas de cálculo:
+- **Retenciones:** una factura de $35,000 a un cliente que retiene da IVA $5,600, retenciones $7,233.35 y total $33,366.65. La póliza y el comprobante cuadran con la factura.
+- **Cierre fiscal:** el cierre diario de los escenarios da 5 facturas emitidas, 1 cancelada, $227,915.87 facturados y $122,466.67 cobrados.
+- **Balanza:** el saldo de la cuenta Clientes es igual a la suma de saldos de las facturas por cobrar.
 
 ### 6.3 Escenarios cargados (`vw_facturas`)
 
 | Folio | Cliente | Total (MXN) | Saldo (MXN) | Estado | Qué demuestra |
 | --- | --- | --- | --- | --- | --- |
-| F-000001 | Comercializadora del Valle de México | 42,466.67 | 0.00 | PAGADA | Pago en una exhibición |
-| F-000002 | Tecnologías Integrales del Norte | 162,110.00 | 82,110.00 | EMITIDA | Dos abonos con distinto método |
-| F-000003 | Jorge Gómez Martínez | 1,508.00 | 0.00 | CANCELADA | Cancelación por Gerente |
+| F-000001 | Comercializadora del Valle de México | 42,466.67 | 0.00 | PAGADA | Pago en una exhibición; comprobante PUE |
+| F-000002 | Tecnologías Integrales del Norte | 162,110.00 | 82,110.00 | EMITIDA | Dos abonos con distinto método; comprobante PPD |
+| F-000003 | Jorge Gómez Martínez | 1,508.00 | 0.00 | CANCELADA | Cancelación por Gerente y póliza inversa |
 | F-000004 | Educación Superior Digital | 20,555.20 | 20,555.20 | EMITIDA | Crédito a 30 días con descuento |
-| F-000005 | Sofía Ramírez Sánchez | 2,784.00 | 2,784.00 | EMITIDA | Pago cancelado: regresó a EMITIDA |
+| F-000005 | Sofía Ramírez Sánchez | 2,784.00 | 2,784.00 | EMITIDA | Pago en efectivo cancelado: regresó a EMITIDA y se revirtió la póliza |
 | F-000006 | Hospital San Rafael | 25,520.00 | — | BORRADOR | Edición con un concepto eliminado |
 
-Evidencia: `db/resultado_pruebas.txt` y commit `b40e7b6`. Las fechas se guardan en UTC, 6 horas adelante de la hora del centro de México.
+- **Evidencia:** `database/resultado_pruebas.txt`.
+- **Horario:** las fechas se guardan en UTC, que va 6 horas adelante del centro de México. Los cierres fiscales y la antigüedad de saldos convierten a la fecha local con `fn_fecha_local`.
 
 ---
 
@@ -428,10 +572,12 @@ Evidencia: `db/resultado_pruebas.txt` y commit `b40e7b6`. Las fechas se guardan 
 
 | Fecha | Hito | Resultado |
 | --- | --- | --- |
+| 19 nov 2026 | Extensión de la base para la rúbrica | 10 tablas, 8 SP y RN-25 a RN-33; 63 de 63 pruebas en RDS |
+| 19 nov 2026 | Reorganización del repositorio | Estructura del checklist (`database/`, `docs/`, `frontend/`, `scripts/`), README y despliegue automatizado |
 | 19 nov 2026 | Evaluación contra la rúbrica oficial | Brechas identificadas y plan priorizado por puntos |
 | 19 nov 2026 | Prototipo de interfaz | Demo navegable de 4 pantallas con las mismas reglas |
-| 19 nov 2026 | Carga y pruebas en RDS | PostgreSQL 18.3, 31 de 31 pruebas en OK |
-| 19 nov 2026 | Control de versiones | Commit `b40e7b6`, sin credenciales ni certificados |
+| 19 nov 2026 | Carga y pruebas en RDS | PostgreSQL 18.3, 31 de 31 pruebas de la versión inicial |
+| 19 nov 2026 | Control de versiones | Primer commit, sin credenciales ni certificados |
 | 19 nov 2026 | Acceso de red | Regla del security group actualizada a la IP vigente |
 | 17 nov 2026 | Revisión de infraestructura | Se confirmó la instancia RDS existente |
 | 17 nov 2026 | Adaptación al modelo del Equipo 3 | Script sobre las 10 tablas del diagrama |
@@ -443,11 +589,12 @@ Evidencia: `db/resultado_pruebas.txt` y commit `b40e7b6`. Las fechas se guardan 
 
 ```mermaid
 flowchart LR
-    A["1 · Modelo ER<br/>✅"] --> B["2 · Script BD + SP<br/>✅"] --> C["3 · Despliegue RDS<br/>✅"] --> D["4 · Pruebas<br/>✅"] --> E["5 · Brechas de la rúbrica<br/>tablas, SP, DynamoDB"] --> F["6 · API + JWT<br/>Lambda / API Gateway"] --> G["7 · Frontend conectado"] --> H["8 · Docs + GitHub<br/>entrega final"]
+    A["1 · Modelo ER<br/>✅"] --> B["2 · Script BD + SP<br/>✅"] --> C["3 · Despliegue RDS<br/>✅"] --> D["4 · Pruebas<br/>✅"] --> E["5 · Brechas de la rúbrica en BD<br/>✅ (falta DynamoDB)"] --> F["6 · API + JWT<br/>Lambda / API Gateway"] --> G["7 · Frontend conectado"] --> H["8 · Docs + GitHub<br/>entrega final"]
     style A fill:#e3f3ea
     style B fill:#e3f3ea
     style C fill:#e3f3ea
     style D fill:#e3f3ea
+    style E fill:#e3f3ea
 ```
 
 ---
@@ -455,27 +602,29 @@ flowchart LR
 ## 8. Pendientes para la versión final
 
 ### Prioridad 1 · Base de datos (rubros 1 y 3, 50 puntos)
-- [ ] Tablas `impuestos_historico` (IVA y retenciones con vigencia), `usuarios` y `roles` (contraseña en hash)
-- [ ] Tabla de auditoría de tarifas; SP04 registra cada cambio
-- [ ] SP faltantes: retenciones, descuento automático por cliente o volumen, reversión contable, cierre fiscal diario y mensual, antigüedad de saldos por rangos, estructura del comprobante (JSON), asignación masiva de características
-- [ ] Script independiente de SP en `/database`
+- [x] Tablas `impuestos_historico` (IVA y retenciones con vigencia), `usuarios` y `roles` (contraseña en hash)
+- [x] Tabla de auditoría de tarifas; todo cambio de precio queda registrado
+- [x] SP faltantes: retenciones, descuento automático, reversión contable, cierre fiscal, antigüedad de saldos, comprobante JSON y asignación masiva
+- [x] Script independiente de SP en `database/02_procedimientos.sql`
+- [ ] Actualizar el diagrama de draw.io con las tablas 11 a 20
 
 ### Prioridad 2 · Arquitectura en AWS (rubro 2, 25 puntos)
 - [ ] DynamoDB On-Demand para la bitácora o los eventos inmutables, con esquema JSON e índices
 - [ ] API en Lambda (Python, 128–256 MB, `LabRole`) detrás de API Gateway
-- [ ] Endpoints y credenciales temporales en variables de entorno; script de despliegue
+- [x] Endpoint y credenciales de RDS en variables de entorno (`.env`); script de despliegue de la base
 - [ ] Apagar RDS fuera de horario y activar la protección contra borrado
 
 ### Prioridad 3 · Seguridad (rubro 4, 15 puntos)
-- [ ] JWT y contraseñas con bcrypt o Argon2
-- [ ] Permisos por rol en cada endpoint
+- [x] Contraseñas con bcrypt y bloqueo tras 5 intentos fallidos (en la base)
+- [ ] JWT en la API
+- [ ] Permisos por rol en cada endpoint (la base ya los valida en cada SP)
 - [ ] Consultas parametrizadas, escape contra XSS y pruebas que lo demuestren
 
 ### Prioridad 4 · Frontend, documentación y Git (rubro 5, 10 puntos)
 - [ ] Frontend conectado a la API
 - [ ] GitHub con commits de los 4 integrantes
 - [ ] OpenAPI o colección de Postman en `/docs`
-- [ ] `README.md` de despliegue y pruebas
+- [x] `README.md` de despliegue y pruebas
 
 ### Riesgos
 
@@ -484,12 +633,14 @@ flowchart LR
 | Las sesiones del Learner Lab expiran | La aplicación pierde conexión | Credenciales y endpoints en variables de entorno |
 | La IP del equipo cambia | No hay conexión desde un cliente local | Revisarla antes de cada sesión; Lambda no depende de ella |
 | Agotar los 100 USD | Se detiene el laboratorio | Apagar RDS, DynamoDB On-Demand, Lambda 128–256 MB |
-| La instancia no tiene protección contra borrado | Pérdida de la base | Activarla; el script reconstruye todo en minutos |
+| La instancia no tiene protección contra borrado | Pérdida de la base | Activarla; el script reconstruye todo en minutos y hay respaldos con `pg_dump` |
+| El prototipo no conoce las reglas nuevas | En la demo visual no aparecen los descuentos por volumen ni las retenciones | Demostrarlas con el guion SQL de la sección 9.4 hasta conectar el frontend |
 
 ### Preguntas para el profesor
 1. ¿Cuál es la fecha de la entrega final y de la demostración en vivo?
-2. ¿Qué retenciones debe calcular el sistema (por ejemplo, ISR 10 % y dos terceras partes del IVA cuando el cliente es persona moral)?
+2. ¿Son correctas las retenciones implementadas (ISR 10 % y dos terceras partes del IVA cuando el cliente está obligado a retener)? Las tasas son datos de `impuestos_historico` y se pueden ajustar sin cambiar código.
 3. ¿El cierre fiscal basta como consolidado diario y mensual en una tabla, o hay un formato específico?
+4. ¿«100 servicios con al menos 50 características» significa un diccionario de 50 (lo implementado: cada servicio tiene entre 11 y 13) o 50 por servicio?
 
 ---
 
@@ -497,8 +648,8 @@ flowchart LR
 
 ### 9.1 Prototipo de interfaz
 
-- **Enlace:** https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh (compartirlo antes de la revisión)
-- **Qué es:** aplicación web de 4 pantallas que usa los mismos datos semilla y aplica las mismas reglas que los SP. **No está conectada a RDS:** los datos viven en el navegador y se reinician al recargar.
+- **Archivo:** `frontend/prototipo_facturacion.html`. Se abre directamente en el navegador. Versión en línea: https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh (compartirla antes de la revisión).
+- **Qué es:** una aplicación web de 4 pantallas con los mismos datos semilla y las reglas RN-01 a RN-24. **No está conectada a RDS:** los datos viven en el navegador y se reinician al recargar. Las reglas RN-25 a RN-33 sólo existen en la base.
 - **Consola SQL lateral:** cada acción muestra el `CALL` equivalente y su resultado o error RN-xx.
 
 | Pantalla | Qué muestra | Equivalente en la base |
@@ -538,19 +689,46 @@ CALL sp_registrar_pago(2, 5, 100, 'x', 3);       -- RN-20
 SELECT * FROM vw_facturas;
 ```
 
-### 9.4 Capturas de evidencia sugeridas (`docs/evidencias/`)
+### 9.4 Guion de las funciones nuevas (sólo en la base)
+
+```sql
+SET search_path TO facturacion;
+-- Retenciones: Constructora Peninsular (cliente 7) retiene ISR e IVA
+CALL sp_crear_factura(7, 2);                     -- anotar <id>
+CALL sp_agregar_detalle(<id>, 1, 1, 0);          -- $35,000
+SELECT folio, subtotal, impuestos, retenciones, total FROM vw_facturas WHERE id_factura = <id>;
+CALL sp_emitir_factura(<id>, 30);
+SELECT * FROM vw_polizas WHERE folio = (SELECT folio FROM facturas WHERE id_factura = <id>);
+CALL sp_generar_comprobante(<id>);               -- devuelve el JSON del CFDI 4.0
+-- Descuento automático: Alimentos Selectos (cliente 8) tiene convenio del 8 %
+CALL sp_crear_factura(8, 2);
+CALL sp_agregar_detalle(<id2>, 11, 24, 0);       -- 24 unidades: aplica el 8 % del convenio (mayor que el 5 % por volumen)
+-- Auditoría de tarifas
+CALL sp_actualizar_precio(13, 950, 2);           -- Facturista: $890 → $950 (+6.7 %)
+SELECT * FROM vw_auditoria_tarifas;
+-- Reportes
+SELECT * FROM vw_antiguedad_saldos;
+SELECT * FROM vw_balanza;
+CALL sp_cierre_fiscal('DIARIO', fn_hoy(), 1);
+SELECT * FROM cierres_fiscales;
+```
+
+> Este guion **deja datos**. Para volver al estado inicial: `.\scripts\cargar_bd.ps1 -Forzar`.
+
+### 9.5 Capturas de evidencia sugeridas (`docs/evidencias/`)
 
 | Archivo | Qué capturar |
 | --- | --- |
 | `01_rds_instancia.png` | Consola RDS: `db-billing-postgres` en estado Available, db.t3.micro, 20 GiB |
 | `02_security_group.png` | Regla de entrada 5432 limitada a una IP /32 |
-| `03_conteos.png` | Resultado de la consulta de mínimos (10 / 13 / 100 / 50 / 1220) |
-| `04_pruebas_31_ok.png` | `resultado_pruebas.txt` con los 31 OK |
+| `03_conteos.png` | Resultado de la consulta de mínimos (20 / 21 / 100 / 50 / 1220) |
+| `04_pruebas_63_ok.png` | Salida de `scripts/cargar_bd.ps1` con 63 pruebas OK |
 | `05_vw_facturas.png` | Las 6 facturas con sus estados |
 | `06_error_regla.png` | Un `CALL` rechazado con su código RN-xx |
-| `07_prototipo_panel.png` | Panel del prototipo |
-| `08_prototipo_consola.png` | Consola SQL del prototipo después del guion |
-| `09_erd_pgadmin.png` | ERD generado por pgAdmin desde la base real |
+| `07_polizas_balanza.png` | `vw_polizas` y `vw_balanza` |
+| `08_comprobante.png` | JSON de `sp_generar_comprobante` |
+| `09_prototipo_panel.png` | Panel del prototipo |
+| `10_erd_pgadmin.png` | ERD generado por pgAdmin desde la base real |
 
 ---
 
@@ -563,6 +741,8 @@ Todas las consultas van sobre el esquema `facturacion`. Para exportar a CSV desd
 ```
 
 ### 10.1 Cumplimiento de mínimos
+
+Es la primera consulta de `database/04_pruebas.sql`:
 
 ```sql
 SET search_path TO facturacion;
@@ -577,26 +757,19 @@ UNION ALL SELECT 'Valores servicio-característica', count(*) FROM servicio_cara
 
 ### 10.2 Antigüedad de saldos por rangos
 
-Hoy es una consulta; en la versión final pasará a un SP.
-
 ```sql
-SELECT cliente, rfc,
-       sum(saldo) FILTER (WHERE fecha_vencimiento >= now())                      AS al_corriente,
-       sum(saldo) FILTER (WHERE dias_atraso BETWEEN 1  AND 30)                   AS "1_30",
-       sum(saldo) FILTER (WHERE dias_atraso BETWEEN 31 AND 60)                   AS "31_60",
-       sum(saldo) FILTER (WHERE dias_atraso BETWEEN 61 AND 90)                   AS "61_90",
-       sum(saldo) FILTER (WHERE dias_atraso > 90)                                AS mas_de_90,
-       sum(saldo)                                                                AS total
-  FROM facturacion.vw_facturas
- WHERE estado = 'EMITIDA' AND saldo > 0
- GROUP BY cliente, rfc
- ORDER BY total DESC;
+SELECT * FROM facturacion.vw_antiguedad_saldos;                        -- a hoy
+SELECT * FROM facturacion.fn_antiguedad_saldos('2027-01-31');          -- a una fecha de corte
 ```
 
-### 10.3 Ventas por mes (base para el cierre fiscal)
+### 10.3 Cierre fiscal y ventas por mes
 
 ```sql
-SELECT date_trunc('month', fecha_emision AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City')::date AS mes,
+CALL facturacion.sp_cierre_fiscal('MENSUAL', '2026-11-01', 1);         -- sólo Gerente
+SELECT * FROM facturacion.cierres_fiscales ORDER BY periodo_inicio;
+
+-- Consulta libre sin cerrar el periodo
+SELECT date_trunc('month', facturacion.fn_fecha_local(fecha_emision))::date AS mes,
        count(*)        AS facturas,
        sum(subtotal)   AS subtotal,
        sum(impuestos)  AS iva,
@@ -614,6 +787,10 @@ SELECT date_trunc('month', fecha_emision AT TIME ZONE 'UTC' AT TIME ZONE 'Americ
 | Cobranza por método de pago | `SELECT * FROM facturacion.vw_cobranza_metodo;` |
 | Catálogo con número de características | `SELECT * FROM facturacion.vw_catalogo_servicios;` |
 | Ficha técnica de un servicio | `SELECT * FROM facturacion.vw_ficha_servicio WHERE codigo_servicio = 'SRV-001';` |
+| Pólizas y balanza de comprobación | `SELECT * FROM facturacion.vw_polizas;` · `SELECT * FROM facturacion.vw_balanza;` |
+| Cambios de tarifa | `SELECT * FROM facturacion.vw_auditoria_tarifas;` |
+| Tasas de impuestos e historial | `SELECT * FROM facturacion.vw_impuestos;` |
+| Usuarios y roles (sin hash) | `SELECT * FROM facturacion.vw_usuarios;` |
 | Servicios más vendidos | ver abajo |
 
 ```sql
@@ -653,18 +830,20 @@ plt.tight_layout(); plt.savefig("docs/reportes/ventas_categoria.png", dpi=150)
 | ER desde la base real | pgAdmin: clic derecho sobre la base `billing` → *ERD For Database*, o DBeaver: esquema `facturacion` → pestaña *ER Diagram* |
 | Diagrama de AWS con íconos oficiales | draw.io → biblioteca *AWS 2025 / AWS19*, siguiendo la estructura de la sección 3.2 |
 
-Diagramas de este archivo: arquitectura actual (3.1), arquitectura objetivo (3.2), contexto C4 (3.3), entidad-relación (4.1), ciclo de vida de la factura (5.1), secuencia de emisión y cobro (5.2) y avance por fases (7.2).
+Diagramas de este archivo: arquitectura actual (3.1), arquitectura objetivo (3.2), contexto C4 (3.3), entidad-relación de 20 tablas (4.1), ciclo de vida de la factura (5.1), secuencia de emisión y cobro (5.2) y avance por fases (7.2).
 
 ---
 
 ## 12. Documentos relacionados
 
+- `README.md`: configuración, despliegue, pruebas y conexión con pgAdmin.
+- Scripts de base de datos: `database/01_esquema.sql`, `02_procedimientos.sql`, `03_datos.sql` y `04_pruebas.sql`.
+- Resultado de las pruebas: `database/resultado_pruebas.txt`.
+- Despliegue: `scripts/cargar_bd.ps1` (Windows) y `scripts/cargar_bd.sh` (macOS/Linux).
+- Prototipo de interfaz: `frontend/prototipo_facturacion.html` · https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh
 - Especificaciones técnicas: https://claude.ai/artifact/Cr6P2ecmVk3tDjh8MbDSpb
 - Reporte de avance (versión editable): https://claude.ai/artifact/Vnb1UvgPUG5hqHFq6ovPHT
-- Prototipo de interfaz: https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh
-- Scripts: `db/facturacion_completo.sql`, `db/facturacion_pruebas.sql`, `db/resultado_pruebas.txt`
-- Contexto para Claude Code: `CONTEXTO_CLAUDE_CODE.md`
-- Modelo ER original: `BdOptativa.drawio`
-- Rúbrica: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* (Optativa I)
+- Modelo ER original: `BdOptativa.drawio` (**aún no está en el repositorio**; agregarlo a `docs/`).
+- Rúbrica: `docs/rubrica_proyecto_final.pdf`.
 
 > Los enlaces de claude.ai son privados hasta que se comparten desde el botón «Compartir» de cada uno.
