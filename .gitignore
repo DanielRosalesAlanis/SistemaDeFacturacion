@@ -1,0 +1,10 @@
+# Credenciales y certificados: nunca en git
+.env
+db/certs/
+
+# Respaldos y salidas locales
+db/*.dump
+
+# Python (para la API futura)
+__pycache__/
+.venv/
