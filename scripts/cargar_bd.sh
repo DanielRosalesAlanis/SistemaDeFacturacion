@@ -37,7 +37,7 @@ if [[ $SOLO_PRUEBAS -eq 0 ]]; then
   fi
   for f in 01_esquema.sql 02_procedimientos.sql 03_datos.sql; do
     echo "Cargando database/$f ..."
-    psql -X -q -v ON_ERROR_STOP=1 -f "database/$f" 2>&1 | grep -v NOTICE || true
+    psql -X -q -v ON_ERROR_STOP=1 -f "database/$f" 2>&1 | grep -vE 'NOTICE|DETAIL|^drop cascades' || true
     [[ ${PIPESTATUS[0]} -eq 0 ]] || { echo "Falló $f" >&2; exit 1; }
   done
 fi

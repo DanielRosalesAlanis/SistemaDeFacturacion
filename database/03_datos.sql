@@ -12,6 +12,37 @@ INSERT INTO empleados(nombre, puesto, correo) VALUES
   ('Carlos Ruiz Pineda',   'Cajero',     'carlos.ruiz@facturacion.mx'),
   ('Diego Salas Ortega',   'Auxiliar',   'diego.salas@facturacion.mx');
 
+INSERT INTO roles(nombre_rol, descripcion) VALUES
+  ('Gerente',    'Todo: cancelaciones, precios con variación mayor a ±30 %, impuestos, cierres y usuarios'),
+  ('Facturista', 'Crea, edita y emite facturas; cambia tarifas hasta ±30 %'),
+  ('Cajero',     'Registra pagos'),
+  ('Auxiliar',   'Sólo consulta');
+
+-- Cuentas de demostración, una por empleado, con el rol igual a su puesto.
+-- Contraseña de las 4 cuentas: Demo2026!  (SÓLO PARA LA DEMO; cámbiese en
+-- producción). La base guarda únicamente el hash bcrypt, cada uno con su sal.
+INSERT INTO usuarios(id_empleado, id_rol, nombre_usuario, contrasena_hash)
+SELECT e.id_empleado, r.id_rol, u.usuario, u.hash
+  FROM (VALUES
+    ('laura.mendez@facturacion.mx', 'laura.mendez', '$2b$12$yCN2m8PGhvCmRi6G0UX4PuYCVv4VOd2e1uGiy0Zsx15eQ9uKjbDbi'),
+    ('ana.torres@facturacion.mx',   'ana.torres',   '$2b$12$A6nYvxMcoKhb8ypLfQF6YuK4r0pUqhUDdkGl3cDf6zVQ7ElFXUClu'),
+    ('carlos.ruiz@facturacion.mx',  'carlos.ruiz',  '$2b$12$lkB.VyOKe8INeEhoKprWQuDm3B7NrZTov.2xuB2a982DiK53mmb3K'),
+    ('diego.salas@facturacion.mx',  'diego.salas',  '$2b$12$29xLZUY9ry7YVIhioA30MOjc032zHJi6k7/4NgCn8fA9h0zCsf7ki')
+       ) AS u(correo, usuario, hash)
+  JOIN empleados e ON e.correo = u.correo
+  JOIN roles r     ON r.nombre_rol = e.puesto;
+
+-- Impuestos con su vigencia (el 15 % se conserva como historial)
+INSERT INTO impuestos_historico(clave, tipo, tasa, vigente_desde, vigente_hasta, descripcion) VALUES
+  ('IVA', 'TRASLADO',  0.150000, '1995-04-01', '2009-12-31', 'IVA general 15 % (1995 a 2009)'),
+  ('IVA', 'TRASLADO',  0.160000, '2010-01-01', NULL,         'IVA general 16 %'),
+  ('IVA', 'RETENCION', 0.106667, '2014-01-01', NULL,         'Retención de dos terceras partes del IVA'),
+  ('ISR', 'RETENCION', 0.100000, '2014-01-01', NULL,         'Retención de ISR del 10 %');
+
+-- Descuento automático por cantidad en un mismo renglón
+INSERT INTO descuentos_volumen(cantidad_minima, descuento_pct) VALUES
+  (10, 3.00), (24, 5.00), (50, 8.00);
+
 INSERT INTO metodos_pago(nombre_metodo, descripcion, estado) VALUES
   ('Efectivo',             'Pago en caja',                                  TRUE),
   ('Transferencia SPEI',   'Transferencia electrónica interbancaria',       TRUE),
@@ -1448,6 +1479,17 @@ BEGIN
   CALL sp_registrar_cliente('Restaurantes La Tradición SA de CV', NULL, 'RES230115TY5', 'cxp@latradicion.mx', '7771234567', 'Av. Morelos Sur 80, Cuernavaca, Mor., CP 62000', v_id);
 END $$;
 
+-- Condiciones comerciales y fiscales pactadas (clientes fuera de los
+-- escenarios de abajo, para no alterar sus montos)
+INSERT INTO condiciones_cliente(id_cliente, descuento_pct, retiene_isr, retiene_iva, notas)
+SELECT c.id_cliente, v.descuento, v.isr, v.iva, v.notas
+  FROM (VALUES
+    ('CON170918XY4', 0, TRUE,  TRUE,  'Persona moral obligada a retener ISR e IVA'),
+    ('ALI190601GH9', 8, FALSE, FALSE, 'Convenio anual: 8 % en todos los servicios'),
+    ('SER180912UV1', 5, FALSE, TRUE,  'Convenio 5 %; retiene dos terceras partes del IVA')
+       ) AS v(rfc, descuento, isr, iva, notas)
+  JOIN clientes c ON c.identificacion_fiscal = v.rfc;
+
 -- Escenarios que recorren el ciclo completo de la factura
 DO $$
 DECLARE f INT; d INT; p INT; s DECIMAL;
@@ -1493,4 +1535,12 @@ BEGIN
   CALL sp_agregar_detalle(f, 41, 1, 0, d);          -- análisis de vulnerabilidades
   CALL sp_agregar_detalle(f, 45, 1, 0, d);          -- monitoreo SOC
   CALL sp_eliminar_detalle(d);                      -- se quita el SOC
+END $$;
+
+-- Estructura de comprobante (CFDI 4.0) de las dos primeras facturas
+DO $$
+DECLARE j JSONB;
+BEGIN
+  CALL sp_generar_comprobante(1, j);                -- F-000001, de contado (PUE)
+  CALL sp_generar_comprobante(2, j);                -- F-000002, a crédito (PPD)
 END $$;

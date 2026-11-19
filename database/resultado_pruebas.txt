@@ -1,84 +1,151 @@
 SET
             requisito            | obtenido | minimo 
 ---------------------------------+----------+--------
- Tablas                          |       10 |      8
- Procedimientos almacenados      |       13 |     10
+ Tablas                          |       20 |      8
+ Procedimientos almacenados      |       21 |     10
+ Funciones                       |       11 |       
+ Vistas                          |       11 |       
  Servicios                       |      100 |    100
  Características                 |       50 |     50
  Valores servicio-característica |     1220 |    100
-(5 filas)
+(7 filas)
 
 CREATE PROCEDURE
-psql:database/04_pruebas.sql:34: NOTICE:  OK  RN-01: RFC XX12 con formato inválido
+CREATE PROCEDURE
+psql:database/04_pruebas.sql:59: NOTICE:  OK  RN-01: RFC XX12 con formato inválido
 CALL
-psql:database/04_pruebas.sql:35: NOTICE:  OK  RN-02: El RFC CMA180315KJ2 ya está registrado
+psql:database/04_pruebas.sql:60: NOTICE:  OK  RN-02: El RFC CMA180315KJ2 ya está registrado
 CALL
-psql:database/04_pruebas.sql:36: NOTICE:  OK  RN-03: Correo electrónico inválido
+psql:database/04_pruebas.sql:61: NOTICE:  OK  RN-03: Correo electrónico inválido
 CALL
-psql:database/04_pruebas.sql:37: NOTICE:  OK  RN-03: Una persona física requiere apellido
+psql:database/04_pruebas.sql:62: NOTICE:  OK  RN-03: Una persona física requiere apellido
 CALL
-psql:database/04_pruebas.sql:39: NOTICE:  OK  RN-04: El código de servicio SRV-001 ya existe
+psql:database/04_pruebas.sql:64: NOTICE:  OK  RN-04: El código de servicio SRV-001 ya existe
 CALL
-psql:database/04_pruebas.sql:40: NOTICE:  OK  RN-04: La categoría 99 no existe o está inactiva
+psql:database/04_pruebas.sql:65: NOTICE:  OK  RN-04: La categoría 99 no existe o está inactiva
 CALL
-psql:database/04_pruebas.sql:41: NOTICE:  OK  RN-05: El precio debe ser mayor a cero
+psql:database/04_pruebas.sql:66: NOTICE:  OK  RN-05: El precio debe ser mayor a cero
 CALL
-psql:database/04_pruebas.sql:42: NOTICE:  OK  RN-05: Unidad de medida Litro no válida
+psql:database/04_pruebas.sql:67: NOTICE:  OK  RN-05: Unidad de medida Litro no válida
 CALL
-psql:database/04_pruebas.sql:43: NOTICE:  OK  RN-06: "diez" no es un entero
+psql:database/04_pruebas.sql:68: NOTICE:  OK  RN-06: "diez" no es un entero
 CALL
-psql:database/04_pruebas.sql:44: NOTICE:  OK  RN-06: "Tal vez" debe ser SI o NO
+psql:database/04_pruebas.sql:69: NOTICE:  OK  RN-06: "Tal vez" debe ser SI o NO
 CALL
-psql:database/04_pruebas.sql:45: NOTICE:  OK  RN-06: "30/06/2027" no es una fecha AAAA-MM-DD
+psql:database/04_pruebas.sql:70: NOTICE:  OK  RN-06: "30/06/2027" no es una fecha AAAA-MM-DD
 CALL
-psql:database/04_pruebas.sql:46: NOTICE:  OK  RN-07: Precio nuevo inválido o igual al actual
+psql:database/04_pruebas.sql:71: NOTICE:  OK  RN-07: Precio nuevo inválido o igual al actual
 CALL
-psql:database/04_pruebas.sql:47: NOTICE:  OK  RN-08: Variación de 100.0 % requiere autorización de un Gerente
+psql:database/04_pruebas.sql:72: NOTICE:  OK  RN-08: Variación de 100.0 % requiere autorización de un Gerente
 CALL
-psql:database/04_pruebas.sql:48: NOTICE:  OK  RN-09: El servicio está en facturas en borrador
+psql:database/04_pruebas.sql:73: NOTICE:  OK  RN-09: El servicio está en facturas en borrador
 CALL
-psql:database/04_pruebas.sql:50: NOTICE:  OK  RN-10: El empleado 3 no puede facturar
+psql:database/04_pruebas.sql:75: NOTICE:  OK  RN-10: El empleado 3 no puede facturar
 CALL
-psql:database/04_pruebas.sql:51: NOTICE:  OK  RN-10: El cliente 999 no existe o está inactivo
+psql:database/04_pruebas.sql:76: NOTICE:  OK  RN-10: El cliente 999 no existe o está inactivo
 CALL
-psql:database/04_pruebas.sql:52: NOTICE:  OK  RN-12: La factura está PAGADA; sólo se modifica en BORRADOR
+psql:database/04_pruebas.sql:77: NOTICE:  OK  RN-12: La factura está PAGADA; sólo se modifica en BORRADOR
 CALL
-psql:database/04_pruebas.sql:53: NOTICE:  OK  RN-13: La cantidad debe ser mayor a cero
+psql:database/04_pruebas.sql:78: NOTICE:  OK  RN-13: La cantidad debe ser mayor a cero
 CALL
-psql:database/04_pruebas.sql:54: NOTICE:  OK  RN-13: El servicio 100 no existe o está inactivo
+psql:database/04_pruebas.sql:79: NOTICE:  OK  RN-13: El servicio 100 no existe o está inactivo
 CALL
-psql:database/04_pruebas.sql:55: NOTICE:  OK  RN-14: El descuento debe estar entre 0 y 50 %
+psql:database/04_pruebas.sql:80: NOTICE:  OK  RN-14: El descuento debe estar entre 0 y 50 %
 CALL
-psql:database/04_pruebas.sql:56: NOTICE:  OK  RN-16: La factura no tiene conceptos o su total es cero
+psql:database/04_pruebas.sql:81: NOTICE:  OK  RN-16: La factura no tiene conceptos o su total es cero
 CALL
-psql:database/04_pruebas.sql:57: NOTICE:  OK  RN-17: Los días de crédito deben estar entre 0 y 90
+psql:database/04_pruebas.sql:82: NOTICE:  OK  RN-17: Los días de crédito deben estar entre 0 y 90
 CALL
-psql:database/04_pruebas.sql:61: NOTICE:  OK  RN-18: El cliente tiene facturas vencidas con saldo pendiente
+psql:database/04_pruebas.sql:86: NOTICE:  OK  RN-18: El cliente tiene facturas vencidas con saldo pendiente
 CALL
-psql:database/04_pruebas.sql:63: NOTICE:  OK  RN-19: No se puede abonar a una factura CANCELADA
+psql:database/04_pruebas.sql:88: NOTICE:  OK  RN-19: No se puede abonar a una factura CANCELADA
 CALL
-psql:database/04_pruebas.sql:64: NOTICE:  OK  RN-19: El empleado 2 no puede registrar pagos
+psql:database/04_pruebas.sql:89: NOTICE:  OK  RN-19: El empleado 2 no puede registrar pagos
 CALL
-psql:database/04_pruebas.sql:65: NOTICE:  OK  RN-20: El método de pago 5 no existe o está inactivo
+psql:database/04_pruebas.sql:90: NOTICE:  OK  RN-20: El método de pago 5 no existe o está inactivo
 CALL
-psql:database/04_pruebas.sql:66: NOTICE:  OK  RN-21: Monto 999999 inválido (saldo 82110.00)
+psql:database/04_pruebas.sql:91: NOTICE:  OK  RN-21: Monto 999999 inválido (saldo 82110.00)
 CALL
-psql:database/04_pruebas.sql:67: NOTICE:  OK  RN-23: Sólo un Gerente puede cancelar pagos
+psql:database/04_pruebas.sql:92: NOTICE:  OK  RN-23: Sólo un Gerente puede cancelar pagos
 CALL
-psql:database/04_pruebas.sql:68: NOTICE:  OK  RN-23: El pago ya está CANCELADO
+psql:database/04_pruebas.sql:93: NOTICE:  OK  RN-23: El pago ya está CANCELADO
 CALL
-psql:database/04_pruebas.sql:69: NOTICE:  OK  RN-24: La factura tiene pagos aplicados; cancélelos primero
+psql:database/04_pruebas.sql:94: NOTICE:  OK  RN-24: La factura tiene pagos aplicados; cancélelos primero
 CALL
-psql:database/04_pruebas.sql:70: NOTICE:  OK  RN-24: Sólo un Gerente puede cancelar facturas
+psql:database/04_pruebas.sql:95: NOTICE:  OK  RN-24: Sólo un Gerente puede cancelar facturas
 CALL
- id_factura |  folio   |                    cliente                    |      rfc      |    empleado     |       fecha_emision        |     fecha_vencimiento      | subtotal  | impuestos |   total   |  saldo   | dias_atraso |  estado   
-------------+----------+-----------------------------------------------+---------------+-----------------+----------------------------+----------------------------+-----------+-----------+-----------+----------+-------------+-----------
-          1 | F-000001 | Comercializadora del Valle de México SA de CV | CMA180315KJ2  | Ana Torres Vega | 2026-11-19 22:07:37.584476 | 2026-11-19 22:07:37.584476 |  36609.20 |   5857.47 |  42466.67 |     0.00 |           0 | PAGADA
-          2 | F-000002 | Tecnologías Integrales del Norte SA de CV     | TEC200110AB5  | Ana Torres Vega | 2026-11-19 22:07:37.584476 | 2026-12-19 22:07:37.584476 | 139750.00 |  22360.00 | 162110.00 | 82110.00 |           0 | EMITIDA
-          3 | F-000003 | Jorge Gómez Martínez                          | GOMJ850412HT3 | Ana Torres Vega | 2026-11-19 22:07:37.584476 | 2026-12-04 22:07:37.584476 |   1300.00 |    208.00 |   1508.00 |        0 |           0 | CANCELADA
-          4 | F-000004 | Educación Superior Digital AC                 | EDU100505RT7  | Ana Torres Vega | 2026-11-19 22:07:37.584476 | 2026-12-19 22:07:37.584476 |  17720.00 |   2835.20 |  20555.20 | 20555.20 |           0 | EMITIDA
-          5 | F-000005 | Sofía Ramírez Sánchez                         | RAMS880115KL5 | Ana Torres Vega | 2026-11-19 22:07:37.584476 | 2026-11-19 22:07:37.584476 |   2400.00 |    384.00 |   2784.00 |  2784.00 |           0 | EMITIDA
-          6 | F-000006 | Hospital San Rafael SC                        | HOS210330CD6  | Ana Torres Vega |                            |                            |  22000.00 |   3520.00 |  25520.00 | 25520.00 |           0 | BORRADOR
+psql:database/04_pruebas.sql:97: NOTICE:  OK  RN-25: El empleado 4 no puede cambiar tarifas
+CALL
+psql:database/04_pruebas.sql:99: NOTICE:  OK  RN-27: Sólo un Gerente registra tasas de impuestos
+CALL
+psql:database/04_pruebas.sql:100: NOTICE:  OK  RN-27: La nueva vigencia debe empezar después del 2010-01-01 (no se reescribe el historial)
+CALL
+psql:database/04_pruebas.sql:101: NOTICE:  OK  RN-27: La tasa debe expresarse como fracción entre 0 y 1 (16 % = 0.16)
+CALL
+psql:database/04_pruebas.sql:103: NOTICE:  OK  RN-12: La factura está PAGADA; sólo se modifica en BORRADOR
+CALL
+psql:database/04_pruebas.sql:105: NOTICE:  OK  RN-28: Evento contable AJUSTE no válido
+CALL
+psql:database/04_pruebas.sql:107: NOTICE:  OK  RN-29: No se puede cerrar un periodo futuro
+CALL
+psql:database/04_pruebas.sql:108: NOTICE:  OK  RN-29: Sólo un Gerente puede hacer el cierre fiscal
+CALL
+psql:database/04_pruebas.sql:109: NOTICE:  OK  RN-29: Tipo de cierre SEMANAL no válido (DIARIO o MENSUAL)
+CALL
+psql:database/04_pruebas.sql:110: NOTICE:  OK  RN-29: El periodo MENSUAL 2026-11-01 ya está cerrado
+CALL
+psql:database/04_pruebas.sql:112: NOTICE:  OK  RN-30: Sólo se genera el comprobante de una factura EMITIDA o PAGADA (está BORRADOR)
+CALL
+psql:database/04_pruebas.sql:113: NOTICE:  OK  RN-30: Sólo se genera el comprobante de una factura EMITIDA o PAGADA (está CANCELADA)
+CALL
+psql:database/04_pruebas.sql:115: NOTICE:  OK  RN-31: Se espera un arreglo JSON con al menos una asignación
+CALL
+psql:database/04_pruebas.sql:116: NOTICE:  OK  RN-31: La asignación {"valor": "5", "codigo_servicio": "SRV-999", "id_caracteristica": 3} no corresponde a ningún servicio
+CALL
+psql:database/04_pruebas.sql:117: NOTICE:  OK  RN-31: Asignación incompleta o ambigua: {"valor": "5", "id_servicio": 1, "codigo_servicio": "SRV-001", "id_caracteristica": 3}
+CALL
+psql:database/04_pruebas.sql:118: NOTICE:  OK  RN-06: "quince" no es un entero
+CALL
+psql:database/04_pruebas.sql:120: NOTICE:  OK  RN-32: Sólo un Gerente da de alta usuarios
+CALL
+psql:database/04_pruebas.sql:121: NOTICE:  OK  RN-32: El empleado 4 ya tiene usuario
+CALL
+psql:database/04_pruebas.sql:124: NOTICE:  OK  RN-32: La contraseña debe llegar como hash bcrypt o Argon2id, nunca en texto plano
+CALL
+psql:database/04_pruebas.sql:127: NOTICE:  OK  RN-10: El empleado 2 no puede facturar
+CALL
+psql:database/04_pruebas.sql:130: NOTICE:  OK  RN-33: La cuenta 4 no existe o está bloqueada
+CALL
+psql:database/04_pruebas.sql:142: NOTICE:  OK  RN-25: todo cambio de tarifa queda auditado (con el SP y con un UPDATE directo)
+CALL
+psql:database/04_pruebas.sql:158: NOTICE:  OK  RN-26: descuento automático = mayor entre capturado, cliente y volumen
+CALL
+psql:database/04_pruebas.sql:168: NOTICE:  OK  RN-26: sp_aplicar_descuentos aplica un convenio nuevo a un borrador
+CALL
+psql:database/04_pruebas.sql:187: NOTICE:  OK  RN-27: subtotal, IVA y retenciones de ISR e IVA (factura, póliza y comprobante)
+CALL
+psql:database/04_pruebas.sql:197: NOTICE:  OK  RN-27: una tasa nueva cierra la anterior y se respeta el historial
+CALL
+psql:database/04_pruebas.sql:210: NOTICE:  OK  RN-28: pólizas balanceadas, reversiones completas y Clientes = cuentas por cobrar
+CALL
+psql:database/04_pruebas.sql:221: NOTICE:  OK  RN-29: cierre fiscal diario con las cifras exactas de los escenarios
+CALL
+psql:database/04_pruebas.sql:234: NOTICE:  OK  RN-30: estructura CFDI 4.0 (PUE/PPD, forma de pago y totales que cuadran)
+CALL
+psql:database/04_pruebas.sql:250: NOTICE:  OK  RN-31: asignación masiva todo o nada (10 servicios de una categoría + 1 por código)
+CALL
+psql:database/04_pruebas.sql:261: NOTICE:  OK  RN-32: el permiso viene del rol de la cuenta; alta de usuario con hash bcrypt
+CALL
+psql:database/04_pruebas.sql:277: NOTICE:  OK  RN-33: bloqueo de 15 minutos al quinto intento fallido y reinicio con acceso correcto
+CALL
+ id_factura |  folio   |                    cliente                    |      rfc      |    empleado     |       fecha_emision        |     fecha_vencimiento      | subtotal  | impuestos | retenciones |   total   |  saldo   | dias_atraso |  estado   
+------------+----------+-----------------------------------------------+---------------+-----------------+----------------------------+----------------------------+-----------+-----------+-------------+-----------+----------+-------------+-----------
+          1 | F-000001 | Comercializadora del Valle de México SA de CV | CMA180315KJ2  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-11-19 22:52:11.783698 |  36609.20 |   5857.47 |        0.00 |  42466.67 |     0.00 |           0 | PAGADA
+          2 | F-000002 | Tecnologías Integrales del Norte SA de CV     | TEC200110AB5  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-19 22:52:11.783698 | 139750.00 |  22360.00 |        0.00 | 162110.00 | 82110.00 |           0 | EMITIDA
+          3 | F-000003 | Jorge Gómez Martínez                          | GOMJ850412HT3 | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-04 22:52:11.783698 |   1300.00 |    208.00 |        0.00 |   1508.00 |        0 |           0 | CANCELADA
+          4 | F-000004 | Educación Superior Digital AC                 | EDU100505RT7  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-19 22:52:11.783698 |  17720.00 |   2835.20 |        0.00 |  20555.20 | 20555.20 |           0 | EMITIDA
+          5 | F-000005 | Sofía Ramírez Sánchez                         | RAMS880115KL5 | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-11-19 22:52:11.783698 |   2400.00 |    384.00 |        0.00 |   2784.00 |  2784.00 |           0 | EMITIDA
+          6 | F-000006 | Hospital San Rafael SC                        | HOS210330CD6  | Ana Torres Vega |                            |                            |  22000.00 |   3520.00 |        0.00 |  25520.00 | 25520.00 |           0 | BORRADOR
 (6 filas)
 
            nombre_categoria            | facturas | venta_neta | impuestos 
@@ -124,4 +191,36 @@ CALL
  SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Transferencia mensual      | 2000       | GB
  SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Disponibilidad garantizada | 99.9       | %
 (13 filas)
+
+ id_cliente |                  cliente                  |      rfc      | facturas | por_vencer | dias_1_30 | dias_31_60 | dias_61_90 | mas_de_90 | saldo_total 
+------------+-------------------------------------------+---------------+----------+------------+-----------+------------+------------+-----------+-------------
+          2 | Tecnologías Integrales del Norte SA de CV | TEC200110AB5  |        1 |   82110.00 |         0 |          0 |          0 |         0 |    82110.00
+          6 | Educación Superior Digital AC             | EDU100505RT7  |        1 |   20555.20 |         0 |          0 |          0 |         0 |    20555.20
+         11 | Sofía Ramírez Sánchez                     | RAMS880115KL5 |        1 |    2784.00 |         0 |          0 |          0 |         0 |     2784.00
+(3 filas)
+
+            cuenta             |  cargos   |  abonos   |   saldo    
+-------------------------------+-----------+-----------+------------
+ 101 Caja                      |   2784.00 |   2784.00 |       0.00
+ 102 Bancos                    | 122466.67 |      0.00 |  122466.67
+ 105 Clientes                  | 232207.87 | 126758.67 |  105449.20
+ 209 IVA trasladado no cobrado |    208.00 |  31644.67 |  -31436.67
+ 401 Ingresos por servicios    |   1300.00 | 197779.20 | -196479.20
+(5 filas)
+
+ id_impuesto | clave |   tipo    |   tasa   | vigente_desde | vigente_hasta | vigente |               descripcion                
+-------------+-------+-----------+----------+---------------+---------------+---------+------------------------------------------
+           4 | ISR   | RETENCION | 0.100000 | 2014-01-01    |               | t       | Retención de ISR del 10 %
+           3 | IVA   | RETENCION | 0.106667 | 2014-01-01    |               | t       | Retención de dos terceras partes del IVA
+           1 | IVA   | TRASLADO  | 0.150000 | 1995-04-01    | 2009-12-31    | f       | IVA general 15 % (1995 a 2009)
+           2 | IVA   | TRASLADO  | 0.160000 | 2010-01-01    |               | t       | IVA general 16 %
+(4 filas)
+
+ id_usuario | nombre_usuario | id_empleado |      empleado      |   puesto   |    rol     | activo | intentos_fallidos | bloqueado_hasta | ultimo_acceso 
+------------+----------------+-------------+--------------------+------------+------------+--------+-------------------+-----------------+---------------
+          1 | laura.mendez   |           1 | Laura Méndez Ríos  | Gerente    | Gerente    | t      |                 0 |                 | 
+          2 | ana.torres     |           2 | Ana Torres Vega    | Facturista | Facturista | t      |                 0 |                 | 
+          3 | carlos.ruiz    |           3 | Carlos Ruiz Pineda | Cajero     | Cajero     | t      |                 0 |                 | 
+          4 | diego.salas    |           4 | Diego Salas Ortega | Auxiliar   | Auxiliar   | t      |                 0 |                 | 
+(4 filas)
 

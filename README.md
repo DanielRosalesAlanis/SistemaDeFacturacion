@@ -2,7 +2,33 @@
 
 Optativa I · Bases de Datos en la Nube · Proyecto C · AWS Academy Learner Lab
 
-Base de datos de facturación de servicios en **Amazon RDS for PostgreSQL**. Las reglas de negocio (RN-xx) viven en procedimientos almacenados: la aplicación escribe sólo con `CALL facturacion.sp_*` y lee de las vistas `facturacion.vw_*`.
+Base de datos de facturación de servicios en **Amazon RDS for PostgreSQL**. Las reglas de negocio (RN-01 a RN-33) viven en procedimientos almacenados: la aplicación escribe sólo con `CALL facturacion.sp_*` y lee de las vistas `facturacion.vw_*`.
+
+| Elemento | Cantidad |
+| --- | --- |
+| Tablas | 20 (10 del modelo ER del equipo + 10 de extensión para la rúbrica) |
+| Procedimientos almacenados | 21 |
+| Funciones · vistas · triggers | 11 · 11 · 1 |
+| Servicios · características · valores | 100 · 50 · 1,220 |
+| Pruebas automatizadas | 63 (todas en OK en RDS PostgreSQL 18.3) |
+
+### Los 10 propósitos de procedimientos de la rúbrica
+
+| # | Propósito | Implementación |
+| --- | --- | --- |
+| 1 | Folios atómicos | `sp_crear_factura` con `pg_advisory_xact_lock` |
+| 2 | Subtotal, IVA y retenciones | `sp_recalcular_totales` + `impuestos_historico` + `factura_impuestos` |
+| 3 | Descuentos por cliente o volumen | `fn_descuento_automatico`, `sp_agregar_detalle`, `sp_aplicar_descuentos` |
+| 4 | Cancelación y reversión contable | `sp_cancelar_factura`, `sp_cancelar_pago` → `sp_contabilizar` (póliza inversa) |
+| 5 | Cierre fiscal diario o mensual | `sp_cierre_fiscal` → `cierres_fiscales` |
+| 6 | Validación de estados de pago | `sp_registrar_pago`, `sp_cancelar_pago` (RN-19 a RN-23) |
+| 7 | Antigüedad de saldos | `fn_antiguedad_saldos(fecha_corte)` y `vw_antiguedad_saldos` |
+| 8 | Estructura para comprobante o timbrado | `sp_generar_comprobante` → JSON CFDI 4.0 en `comprobantes` |
+| 9 | Asignación masiva de características | `sp_asignar_caracteristicas_masivo` (JSON, todo o nada) |
+| 10 | Auditoría de cambios en tarifas | trigger `tg_auditar_tarifa` → `auditoria_tarifas`, `vw_auditoria_tarifas` |
+
+Usuarios y roles: `usuarios` (hash bcrypt, bloqueo tras 5 intentos) y `roles`; los permisos de cada SP se validan con `fn_empleado_puede`.
+Cuentas de demostración: `laura.mendez` (Gerente), `ana.torres` (Facturista), `carlos.ruiz` (Cajero), `diego.salas` (Auxiliar), todas con contraseña `Demo2026!` **sólo para la demo**.
 
 ## Estructura del repositorio
 

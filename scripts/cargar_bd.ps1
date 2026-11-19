@@ -63,7 +63,8 @@ if (-not $SoloPruebas) {
     }
     foreach ($f in "01_esquema.sql", "02_procedimientos.sql", "03_datos.sql") {
         Write-Host "Cargando database/$f ..."
-        cmd /c "`"$psql`" -X -q -v ON_ERROR_STOP=1 -f database/$f 2>&1" | Where-Object { $_ -notmatch 'NOTICE' }
+        cmd /c "`"$psql`" -X -q -v ON_ERROR_STOP=1 -f database/$f 2>&1" |
+            Where-Object { $_ -notmatch 'NOTICE|DETAIL|^drop cascades' }
         if ($LASTEXITCODE -ne 0) { throw "Falló database/$f (código $LASTEXITCODE)" }
     }
 }
