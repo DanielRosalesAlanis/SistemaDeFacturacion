@@ -9,67 +9,67 @@ SET
 (5 filas)
 
 CREATE PROCEDURE
-psql:db/facturacion_pruebas.sql:34: NOTICE:  OK  RN-01: RFC XX12 con formato inválido
+psql:database/04_pruebas.sql:34: NOTICE:  OK  RN-01: RFC XX12 con formato inválido
 CALL
-psql:db/facturacion_pruebas.sql:35: NOTICE:  OK  RN-02: El RFC CMA180315KJ2 ya está registrado
+psql:database/04_pruebas.sql:35: NOTICE:  OK  RN-02: El RFC CMA180315KJ2 ya está registrado
 CALL
-psql:db/facturacion_pruebas.sql:36: NOTICE:  OK  RN-03: Correo electrónico inválido
+psql:database/04_pruebas.sql:36: NOTICE:  OK  RN-03: Correo electrónico inválido
 CALL
-psql:db/facturacion_pruebas.sql:37: NOTICE:  OK  RN-03: Una persona física requiere apellido
+psql:database/04_pruebas.sql:37: NOTICE:  OK  RN-03: Una persona física requiere apellido
 CALL
-psql:db/facturacion_pruebas.sql:39: NOTICE:  OK  RN-04: El código de servicio SRV-001 ya existe
+psql:database/04_pruebas.sql:39: NOTICE:  OK  RN-04: El código de servicio SRV-001 ya existe
 CALL
-psql:db/facturacion_pruebas.sql:40: NOTICE:  OK  RN-04: La categoría 99 no existe o está inactiva
+psql:database/04_pruebas.sql:40: NOTICE:  OK  RN-04: La categoría 99 no existe o está inactiva
 CALL
-psql:db/facturacion_pruebas.sql:41: NOTICE:  OK  RN-05: El precio debe ser mayor a cero
+psql:database/04_pruebas.sql:41: NOTICE:  OK  RN-05: El precio debe ser mayor a cero
 CALL
-psql:db/facturacion_pruebas.sql:42: NOTICE:  OK  RN-05: Unidad de medida Litro no válida
+psql:database/04_pruebas.sql:42: NOTICE:  OK  RN-05: Unidad de medida Litro no válida
 CALL
-psql:db/facturacion_pruebas.sql:43: NOTICE:  OK  RN-06: "diez" no es un entero
+psql:database/04_pruebas.sql:43: NOTICE:  OK  RN-06: "diez" no es un entero
 CALL
-psql:db/facturacion_pruebas.sql:44: NOTICE:  OK  RN-06: "Tal vez" debe ser SI o NO
+psql:database/04_pruebas.sql:44: NOTICE:  OK  RN-06: "Tal vez" debe ser SI o NO
 CALL
-psql:db/facturacion_pruebas.sql:45: NOTICE:  OK  RN-06: "30/06/2027" no es una fecha AAAA-MM-DD
+psql:database/04_pruebas.sql:45: NOTICE:  OK  RN-06: "30/06/2027" no es una fecha AAAA-MM-DD
 CALL
-psql:db/facturacion_pruebas.sql:46: NOTICE:  OK  RN-07: Precio nuevo inválido o igual al actual
+psql:database/04_pruebas.sql:46: NOTICE:  OK  RN-07: Precio nuevo inválido o igual al actual
 CALL
-psql:db/facturacion_pruebas.sql:47: NOTICE:  OK  RN-08: Variación de 100.0 % requiere autorización de un Gerente
+psql:database/04_pruebas.sql:47: NOTICE:  OK  RN-08: Variación de 100.0 % requiere autorización de un Gerente
 CALL
-psql:db/facturacion_pruebas.sql:48: NOTICE:  OK  RN-09: El servicio está en facturas en borrador
+psql:database/04_pruebas.sql:48: NOTICE:  OK  RN-09: El servicio está en facturas en borrador
 CALL
-psql:db/facturacion_pruebas.sql:50: NOTICE:  OK  RN-10: El empleado 3 no puede facturar
+psql:database/04_pruebas.sql:50: NOTICE:  OK  RN-10: El empleado 3 no puede facturar
 CALL
-psql:db/facturacion_pruebas.sql:51: NOTICE:  OK  RN-10: El cliente 999 no existe o está inactivo
+psql:database/04_pruebas.sql:51: NOTICE:  OK  RN-10: El cliente 999 no existe o está inactivo
 CALL
-psql:db/facturacion_pruebas.sql:52: NOTICE:  OK  RN-12: La factura está PAGADA; sólo se modifica en BORRADOR
+psql:database/04_pruebas.sql:52: NOTICE:  OK  RN-12: La factura está PAGADA; sólo se modifica en BORRADOR
 CALL
-psql:db/facturacion_pruebas.sql:53: NOTICE:  OK  RN-13: La cantidad debe ser mayor a cero
+psql:database/04_pruebas.sql:53: NOTICE:  OK  RN-13: La cantidad debe ser mayor a cero
 CALL
-psql:db/facturacion_pruebas.sql:54: NOTICE:  OK  RN-13: El servicio 100 no existe o está inactivo
+psql:database/04_pruebas.sql:54: NOTICE:  OK  RN-13: El servicio 100 no existe o está inactivo
 CALL
-psql:db/facturacion_pruebas.sql:55: NOTICE:  OK  RN-14: El descuento debe estar entre 0 y 50 %
+psql:database/04_pruebas.sql:55: NOTICE:  OK  RN-14: El descuento debe estar entre 0 y 50 %
 CALL
-psql:db/facturacion_pruebas.sql:56: NOTICE:  OK  RN-16: La factura no tiene conceptos o su total es cero
+psql:database/04_pruebas.sql:56: NOTICE:  OK  RN-16: La factura no tiene conceptos o su total es cero
 CALL
-psql:db/facturacion_pruebas.sql:57: NOTICE:  OK  RN-17: Los días de crédito deben estar entre 0 y 90
+psql:database/04_pruebas.sql:57: NOTICE:  OK  RN-17: Los días de crédito deben estar entre 0 y 90
 CALL
-psql:db/facturacion_pruebas.sql:61: NOTICE:  OK  RN-18: El cliente tiene facturas vencidas con saldo pendiente
+psql:database/04_pruebas.sql:61: NOTICE:  OK  RN-18: El cliente tiene facturas vencidas con saldo pendiente
 CALL
-psql:db/facturacion_pruebas.sql:63: NOTICE:  OK  RN-19: No se puede abonar a una factura CANCELADA
+psql:database/04_pruebas.sql:63: NOTICE:  OK  RN-19: No se puede abonar a una factura CANCELADA
 CALL
-psql:db/facturacion_pruebas.sql:64: NOTICE:  OK  RN-19: El empleado 2 no puede registrar pagos
+psql:database/04_pruebas.sql:64: NOTICE:  OK  RN-19: El empleado 2 no puede registrar pagos
 CALL
-psql:db/facturacion_pruebas.sql:65: NOTICE:  OK  RN-20: El método de pago 5 no existe o está inactivo
+psql:database/04_pruebas.sql:65: NOTICE:  OK  RN-20: El método de pago 5 no existe o está inactivo
 CALL
-psql:db/facturacion_pruebas.sql:66: NOTICE:  OK  RN-21: Monto 999999 inválido (saldo 82110.00)
+psql:database/04_pruebas.sql:66: NOTICE:  OK  RN-21: Monto 999999 inválido (saldo 82110.00)
 CALL
-psql:db/facturacion_pruebas.sql:67: NOTICE:  OK  RN-23: Sólo un Gerente puede cancelar pagos
+psql:database/04_pruebas.sql:67: NOTICE:  OK  RN-23: Sólo un Gerente puede cancelar pagos
 CALL
-psql:db/facturacion_pruebas.sql:68: NOTICE:  OK  RN-23: El pago ya está CANCELADO
+psql:database/04_pruebas.sql:68: NOTICE:  OK  RN-23: El pago ya está CANCELADO
 CALL
-psql:db/facturacion_pruebas.sql:69: NOTICE:  OK  RN-24: La factura tiene pagos aplicados; cancélelos primero
+psql:database/04_pruebas.sql:69: NOTICE:  OK  RN-24: La factura tiene pagos aplicados; cancélelos primero
 CALL
-psql:db/facturacion_pruebas.sql:70: NOTICE:  OK  RN-24: Sólo un Gerente puede cancelar facturas
+psql:database/04_pruebas.sql:70: NOTICE:  OK  RN-24: Sólo un Gerente puede cancelar facturas
 CALL
  id_factura |  folio   |                    cliente                    |      rfc      |    empleado     |       fecha_emision        |     fecha_vencimiento      | subtotal  | impuestos |   total   |  saldo   | dias_atraso |  estado   
 ------------+----------+-----------------------------------------------+---------------+-----------------+----------------------------+----------------------------+-----------+-----------+-----------+----------+-------------+-----------

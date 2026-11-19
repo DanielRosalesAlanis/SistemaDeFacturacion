@@ -1,10 +1,18 @@
 # Credenciales y certificados: nunca en git
 .env
-db/certs/
+.env.*
+!.env.example
+certs/
 
 # Respaldos y salidas locales
-db/*.dump
+*.dump
 
-# Python (para la API futura)
+# Python
 __pycache__/
+*.pyc
 .venv/
+.pytest_cache/
+
+# Empaquetado de Lambda
+build/
+*.zip

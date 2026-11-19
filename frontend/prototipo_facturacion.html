@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo de Facturación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior con navegación + área de trabajo + consola SQL lateral (abajo en pantallas angostas) */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #18212f;
+  --muted: #5d6878;
+  --line: #dde1e7;
+  --accent: #1f4fd6;
+  --accent-soft: #e6ecfc;
+  --good: #1d7a4b; --good-soft: #e3f3ea;
+  --warn: #9a6200; --warn-soft: #fbf0d9;
+  --bad: #b3261e;  --bad-soft: #fbe7e5;
+  --neutral-soft: #eceef2;
+  --console-bg: #121826; --console-ink: #d7deea; --console-muted: #8792a6;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141d; --surface: #171e2a; --ink: #e6eaf1; --muted: #9aa5b6; --line: #2a3342;
+    --accent: #7c9cff; --accent-soft: #1d2a4d;
+    --good: #5cc98f; --good-soft: #15301f; --warn: #e6b350; --warn-soft: #34290f; --bad: #ff8a80; --bad-soft: #3a1714;
+    --neutral-soft: #222a37; --console-bg: #0a0e15; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141d; --surface: #171e2a; --ink: #e6eaf1; --muted: #9aa5b6; --line: #2a3342;
+  --accent: #7c9cff; --accent-soft: #1d2a4d;
+  --good: #5cc98f; --good-soft: #15301f; --warn: #e6b350; --warn-soft: #34290f; --bad: #ff8a80; --bad-soft: #3a1714;
+  --neutral-soft: #222a37; --console-bg: #0a0e15; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-body); }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+/* barra superior */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.brand { display: flex; flex-direction: column; }
+.brand b { font-size: 16px; }
+.brand span { font-size: 12px; color: var(--muted); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a { padding: 6px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; font-weight: 500; }
+nav a:hover { background: var(--neutral-soft); color: var(--ink); }
+nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.actor { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.actor select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+
+.banner { padding: 8px 20px; font-size: 12.5px; color: var(--muted); background: var(--neutral-soft); border-bottom: 1px solid var(--line); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.banner button { margin-left: auto; }
+
+.shell { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 0; min-height: calc(100% - 110px); }
+main { padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1050px) { .shell { grid-template-columns: 1fr; } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.card h2 { font-size: 15px; margin-bottom: 12px; }
+.card h3 { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.tile span { font-size: 12px; color: var(--muted); display: block; }
+.tile b { font-size: 22px; font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }
+.tile small { color: var(--muted); font-size: 12px; }
+.reqs { display: flex; flex-wrap: wrap; gap: 8px; }
+.req { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; background: var(--surface); }
+.req b { color: var(--good); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--neutral-soft); }
+tbody tr.sel { background: var(--accent-soft); }
+.scroll { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 8px; }
+.scroll table th:first-child, .scroll table td:first-child { padding-left: 12px; }
+
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
+.st-BORRADOR { background: var(--neutral-soft); color: var(--muted); }
+.st-EMITIDA { background: var(--warn-soft); color: var(--warn); }
+.st-PAGADA { background: var(--good-soft); color: var(--good); }
+.st-CANCELADA, .st-CANCELADO { background: var(--bad-soft); color: var(--bad); }
+.st-APLICADO { background: var(--good-soft); color: var(--good); }
+
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 500; }
+label.f input, label.f select { padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 14px; min-width: 0; }
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; }
+.btn:hover { background: var(--neutral-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--bad); border-color: var(--bad); }
+.btn.small { padding: 3px 9px; font-size: 12.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 11px; font-size: 12.5px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.totals { display: grid; grid-template-columns: auto auto; gap: 4px 24px; justify-content: end; font-variant-numeric: tabular-nums; }
+.totals .grand { font-size: 18px; font-weight: 700; border-top: 1px solid var(--line); padding-top: 6px; }
+.muted { color: var(--muted); }
+.steps { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+.step { padding: 4px 10px; border-radius: 6px; background: var(--neutral-soft); color: var(--muted); }
+.step.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.step.done { background: var(--good-soft); color: var(--good); }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: 170px 1fr 110px; gap: 10px; align-items: center; font-size: 13px; }
+.bar .track { height: 10px; background: var(--neutral-soft); border-radius: 5px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 5px; }
+@media (max-width: 520px) { .bar { grid-template-columns: 1fr 90px; } .bar .track { grid-column: 1 / -1; order: 3; } }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.empty { color: var(--muted); padding: 16px; text-align: center; }
+
+/* consola SQL */
+aside.console { background: var(--console-bg); color: var(--console-ink); display: flex; flex-direction: column; min-height: 320px; border-left: 1px solid var(--line); }
+@media (min-width: 1051px) { aside.console { position: sticky; top: 61px; height: calc(100vh - 61px); } }
+.console header { padding: 14px 16px 10px; border-bottom: 1px solid #263045; }
+.console header b { display: block; font-size: 13px; }
+.console header span { font-size: 12px; color: var(--console-muted); }
+.log { overflow: auto; padding: 8px 0; flex: 1; font: 12.5px/1.5 var(--font-mono); }
+.entry { padding: 8px 16px; border-bottom: 1px solid #1d2638; }
+.entry .sql { color: #9ec1ff; white-space: pre-wrap; word-break: break-word; }
+.entry .res { margin-top: 3px; white-space: pre-wrap; }
+.entry.ok .res { color: #7fd8a4; }
+.entry.err .res { color: #ff9b8f; }
+.entry time { color: var(--console-muted); font-size: 11px; }
+
+/* aviso emergente */
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: min(560px, calc(100% - 32px)); padding: 10px 16px; border-radius: 8px; font-weight: 500; box-shadow: 0 6px 24px rgba(0,0,0,.18); z-index: 20; }
+.toast.ok { background: var(--good); color: #fff; }
+.toast.err { background: var(--bad); color: #fff; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: up .18s ease-out; } @keyframes up { from { transform: translate(-50%, 8px); opacity: .6; } } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Facturación de Servicios</b><span>Equipo 3 · PostgreSQL en Amazon RDS</span></div>
+  <nav id="nav">
+    <a href="#panel">Panel</a>
+    <a href="#catalogo">Catálogo</a>
+    <a href="#nueva">Nueva factura</a>
+    <a href="#facturas">Facturas y cobranza</a>
+  </nav>
+  <div class="actor">
+    <label for="actor">Actuando como</label>
+    <select id="actor"></select>
+  </div>
+</header>
+<div class="banner">
+  <span>Prototipo de demostración: usa los mismos datos semilla y las mismas reglas de los procedimientos almacenados. Los cambios viven en este navegador; la consola muestra la llamada equivalente en la base.</span>
+  <button class="btn small" id="reset" type="button">Reiniciar datos</button>
+</div>
+<div class="shell">
+  <main id="view"></main>
+  <aside class="console" aria-label="Consola SQL">
+    <header><b>Consola SQL</b><span>Cada acción ejecuta un procedimiento almacenado. Cambia «Actuando como» para ver las reglas de permisos.</span></header>
+    <div class="log" id="log"></div>
+  </aside>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const SEED = {"categorias":[{"id":1,"nombre":"Desarrollo de Software"},{"id":2,"nombre":"Nube y Hosting"},{"id":3,"nombre":"Soporte Técnico"},{"id":4,"nombre":"Redes y Telecomunicaciones"},{"id":5,"nombre":"Ciberseguridad"},{"id":6,"nombre":"Datos y Analítica"},{"id":7,"nombre":"Capacitación"},{"id":8,"nombre":"Consultoría"},{"id":9,"nombre":"Diseño y Marketing Digital"},{"id":10,"nombre":"Servicios Administrativos y Contables"}],"servicios":[{"id":1,"cat":1,"cod":"SRV-001","nom":"Desarrollo de sitio web corporativo","precio":35000.0,"unidad":"Servicio","activo":true},{"id":2,"cat":1,"cod":"SRV-002","nom":"Desarrollo de tienda en línea","precio":68000.0,"unidad":"Servicio","activo":true},{"id":3,"cat":1,"cod":"SRV-003","nom":"Aplicación móvil Android/iOS","precio":120000.0,"unidad":"Servicio","activo":true},{"id":4,"cat":1,"cod":"SRV-004","nom":"Sistema web a la medida","precio":95000.0,"unidad":"Servicio","activo":true},{"id":5,"cat":1,"cod":"SRV-005","nom":"API REST de integración","precio":42000.0,"unidad":"Servicio","activo":true},{"id":6,"cat":1,"cod":"SRV-006","nom":"Mantenimiento evolutivo de software","precio":950.0,"unidad":"Hora","activo":true},{"id":7,"cat":1,"cod":"SRV-007","nom":"Migración de sistema heredado","precio":78000.0,"unidad":"Servicio","activo":true},{"id":8,"cat":1,"cod":"SRV-008","nom":"Pruebas de calidad (QA) de software","precio":18500.0,"unidad":"Servicio","activo":true},{"id":9,"cat":1,"cod":"SRV-009","nom":"Landing page promocional","precio":9500.0,"unidad":"Servicio","activo":true},{"id":10,"cat":1,"cod":"SRV-010","nom":"Desarrollo de bot conversacional","precio":27000.0,"unidad":"Servicio","activo":true},{"id":11,"cat":2,"cod":"SRV-011","nom":"Hosting compartido básico","precio":149.0,"unidad":"Mes","activo":true},{"id":12,"cat":2,"cod":"SRV-012","nom":"Hosting compartido empresarial","precio":399.0,"unidad":"Mes","activo":true},{"id":13,"cat":2,"cod":"SRV-013","nom":"Servidor virtual privado (VPS) 2 vCPU","precio":890.0,"unidad":"Mes","activo":true},{"id":14,"cat":2,"cod":"SRV-014","nom":"Servidor virtual privado (VPS) 8 vCPU","precio":2890.0,"unidad":"Mes","activo":true},{"id":15,"cat":2,"cod":"SRV-015","nom":"Servidor dedicado","precio":6500.0,"unidad":"Mes","activo":true},{"id":16,"cat":2,"cod":"SRV-016","nom":"Registro de dominio .com.mx","precio":520.0,"unidad":"Año","activo":true},{"id":17,"cat":2,"cod":"SRV-017","nom":"Certificado SSL empresarial","precio":2400.0,"unidad":"Año","activo":true},{"id":18,"cat":2,"cod":"SRV-018","nom":"Respaldo en la nube","precio":690.0,"unidad":"Mes","activo":true},{"id":19,"cat":2,"cod":"SRV-019","nom":"Correo corporativo por buzón","precio":85.0,"unidad":"Mes","activo":true},{"id":20,"cat":2,"cod":"SRV-020","nom":"Migración a la nube","precio":32000.0,"unidad":"Servicio","activo":true},{"id":21,"cat":3,"cod":"SRV-021","nom":"Póliza de soporte mensual básica","precio":2500.0,"unidad":"Mes","activo":true},{"id":22,"cat":3,"cod":"SRV-022","nom":"Póliza de soporte mensual premium","precio":7800.0,"unidad":"Mes","activo":true},{"id":23,"cat":3,"cod":"SRV-023","nom":"Soporte técnico por evento","precio":650.0,"unidad":"Evento","activo":true},{"id":24,"cat":3,"cod":"SRV-024","nom":"Mantenimiento preventivo de equipo de cómputo","precio":450.0,"unidad":"Evento","activo":true},{"id":25,"cat":3,"cod":"SRV-025","nom":"Mantenimiento correctivo de equipo de cómputo","precio":750.0,"unidad":"Evento","activo":true},{"id":26,"cat":3,"cod":"SRV-026","nom":"Instalación de sistema operativo","precio":550.0,"unidad":"Evento","activo":true},{"id":27,"cat":3,"cod":"SRV-027","nom":"Mantenimiento de impresoras","precio":600.0,"unidad":"Evento","activo":true},{"id":28,"cat":3,"cod":"SRV-028","nom":"Mesa de ayuda remota","precio":4200.0,"unidad":"Mes","activo":true},{"id":29,"cat":3,"cod":"SRV-029","nom":"Recuperación de información","precio":3200.0,"unidad":"Evento","activo":true},{"id":30,"cat":3,"cod":"SRV-030","nom":"Soporte en sitio por hora","precio":480.0,"unidad":"Hora","activo":true},{"id":31,"cat":4,"cod":"SRV-031","nom":"Instalación de cableado estructurado por nodo","precio":1150.0,"unidad":"Evento","activo":true},{"id":32,"cat":4,"cod":"SRV-032","nom":"Configuración de red LAN","precio":6800.0,"unidad":"Servicio","activo":true},{"id":33,"cat":4,"cod":"SRV-033","nom":"Instalación de red inalámbrica empresarial","precio":12500.0,"unidad":"Servicio","activo":true},{"id":34,"cat":4,"cod":"SRV-034","nom":"Enlace dedicado de internet","precio":4900.0,"unidad":"Mes","activo":true},{"id":35,"cat":4,"cod":"SRV-035","nom":"Configuración de firewall perimetral","precio":8500.0,"unidad":"Servicio","activo":true},{"id":36,"cat":4,"cod":"SRV-036","nom":"Instalación de conmutador IP","precio":15000.0,"unidad":"Servicio","activo":true},{"id":37,"cat":4,"cod":"SRV-037","nom":"Monitoreo de red","precio":3500.0,"unidad":"Mes","activo":true},{"id":38,"cat":4,"cod":"SRV-038","nom":"VPN corporativa","precio":1800.0,"unidad":"Mes","activo":true},{"id":39,"cat":4,"cod":"SRV-039","nom":"Certificación de cableado","precio":9500.0,"unidad":"Servicio","activo":true},{"id":40,"cat":4,"cod":"SRV-040","nom":"Instalación de cámaras IP","precio":2300.0,"unidad":"Evento","activo":true},{"id":41,"cat":5,"cod":"SRV-041","nom":"Análisis de vulnerabilidades","precio":22000.0,"unidad":"Servicio","activo":true},{"id":42,"cat":5,"cod":"SRV-042","nom":"Prueba de penetración externa","precio":48000.0,"unidad":"Servicio","activo":true},{"id":43,"cat":5,"cod":"SRV-043","nom":"Auditoría de seguridad ISO 27001","precio":85000.0,"unidad":"Servicio","activo":true},{"id":44,"cat":5,"cod":"SRV-044","nom":"Antivirus empresarial por equipo","precio":120.0,"unidad":"Mes","activo":true},{"id":45,"cat":5,"cod":"SRV-045","nom":"Monitoreo de seguridad SOC","precio":18000.0,"unidad":"Mes","activo":true},{"id":46,"cat":5,"cod":"SRV-046","nom":"Capacitación en concientización de seguridad","precio":9800.0,"unidad":"Servicio","activo":true},{"id":47,"cat":5,"cod":"SRV-047","nom":"Plan de respuesta a incidentes","precio":36000.0,"unidad":"Servicio","activo":true},{"id":48,"cat":5,"cod":"SRV-048","nom":"Gestión de parches","precio":2800.0,"unidad":"Mes","activo":true},{"id":49,"cat":5,"cod":"SRV-049","nom":"Revisión de código seguro","precio":26000.0,"unidad":"Servicio","activo":true},{"id":50,"cat":5,"cod":"SRV-050","nom":"Análisis forense digital","precio":55000.0,"unidad":"Evento","activo":true},{"id":51,"cat":6,"cod":"SRV-051","nom":"Diseño de base de datos","precio":24000.0,"unidad":"Servicio","activo":true},{"id":52,"cat":6,"cod":"SRV-052","nom":"Administración de base de datos (DBA)","precio":9500.0,"unidad":"Mes","activo":true},{"id":53,"cat":6,"cod":"SRV-053","nom":"Tablero de indicadores (dashboard)","precio":16500.0,"unidad":"Servicio","activo":true},{"id":54,"cat":6,"cod":"SRV-054","nom":"Proceso ETL de integración","precio":28000.0,"unidad":"Servicio","activo":true},{"id":55,"cat":6,"cod":"SRV-055","nom":"Limpieza y depuración de datos","precio":12000.0,"unidad":"Servicio","activo":true},{"id":56,"cat":6,"cod":"SRV-056","nom":"Modelo predictivo de ventas","precio":58000.0,"unidad":"Servicio","activo":true},{"id":57,"cat":6,"cod":"SRV-057","nom":"Almacén de datos (data warehouse)","precio":92000.0,"unidad":"Servicio","activo":true},{"id":58,"cat":6,"cod":"SRV-058","nom":"Reportes automatizados","precio":5400.0,"unidad":"Mes","activo":true},{"id":59,"cat":6,"cod":"SRV-059","nom":"Optimización de consultas SQL","precio":1100.0,"unidad":"Hora","activo":true},{"id":60,"cat":6,"cod":"SRV-060","nom":"Migración de base de datos","precio":38000.0,"unidad":"Servicio","activo":true},{"id":61,"cat":7,"cod":"SRV-061","nom":"Curso de Excel intermedio","precio":3800.0,"unidad":"Evento","activo":true},{"id":62,"cat":7,"cod":"SRV-062","nom":"Curso de Excel avanzado","precio":4800.0,"unidad":"Evento","activo":true},{"id":63,"cat":7,"cod":"SRV-063","nom":"Curso de programación en Python","precio":7500.0,"unidad":"Evento","activo":true},{"id":64,"cat":7,"cod":"SRV-064","nom":"Curso de bases de datos SQL","precio":6900.0,"unidad":"Evento","activo":true},{"id":65,"cat":7,"cod":"SRV-065","nom":"Taller de facturación electrónica CFDI 4.0","precio":3200.0,"unidad":"Evento","activo":true},{"id":66,"cat":7,"cod":"SRV-066","nom":"Curso de Power BI","precio":6200.0,"unidad":"Evento","activo":true},{"id":67,"cat":7,"cod":"SRV-067","nom":"Taller de ciberseguridad para usuarios","precio":2900.0,"unidad":"Evento","activo":true},{"id":68,"cat":7,"cod":"SRV-068","nom":"Curso de administración de proyectos","precio":8900.0,"unidad":"Evento","activo":true},{"id":69,"cat":7,"cod":"SRV-069","nom":"Diplomado en desarrollo web","precio":24000.0,"unidad":"Evento","activo":true},{"id":70,"cat":7,"cod":"SRV-070","nom":"Capacitación en uso de ERP","precio":11500.0,"unidad":"Evento","activo":true},{"id":71,"cat":8,"cod":"SRV-071","nom":"Diagnóstico tecnológico empresarial","precio":28000.0,"unidad":"Servicio","activo":true},{"id":72,"cat":8,"cod":"SRV-072","nom":"Plan estratégico de TI","precio":65000.0,"unidad":"Servicio","activo":true},{"id":73,"cat":8,"cod":"SRV-073","nom":"Consultoría en transformación digital","precio":1800.0,"unidad":"Hora","activo":true},{"id":74,"cat":8,"cod":"SRV-074","nom":"Levantamiento de procesos de negocio","precio":32000.0,"unidad":"Servicio","activo":true},{"id":75,"cat":8,"cod":"SRV-075","nom":"Selección e implementación de ERP","precio":120000.0,"unidad":"Servicio","activo":true},{"id":76,"cat":8,"cod":"SRV-076","nom":"Consultoría en protección de datos personales","precio":38000.0,"unidad":"Servicio","activo":true},{"id":77,"cat":8,"cod":"SRV-077","nom":"Evaluación de proveedores de TI","precio":18000.0,"unidad":"Servicio","activo":true},{"id":78,"cat":8,"cod":"SRV-078","nom":"Gestión de proyectos (PMO) externa","precio":42000.0,"unidad":"Mes","activo":true},{"id":79,"cat":8,"cod":"SRV-079","nom":"Consultoría en cumplimiento fiscal digital","precio":26000.0,"unidad":"Servicio","activo":true},{"id":80,"cat":8,"cod":"SRV-080","nom":"Plan de continuidad de negocio","precio":54000.0,"unidad":"Servicio","activo":true},{"id":81,"cat":9,"cod":"SRV-081","nom":"Diseño de logotipo","precio":6500.0,"unidad":"Servicio","activo":true},{"id":82,"cat":9,"cod":"SRV-082","nom":"Manual de identidad corporativa","precio":18000.0,"unidad":"Servicio","activo":true},{"id":83,"cat":9,"cod":"SRV-083","nom":"Gestión de redes sociales","precio":7900.0,"unidad":"Mes","activo":true},{"id":84,"cat":9,"cod":"SRV-084","nom":"Campaña de publicidad en buscadores","precio":5500.0,"unidad":"Mes","activo":true},{"id":85,"cat":9,"cod":"SRV-085","nom":"Posicionamiento web SEO","precio":6800.0,"unidad":"Mes","activo":true},{"id":86,"cat":9,"cod":"SRV-086","nom":"Producción de video promocional","precio":22000.0,"unidad":"Servicio","activo":true},{"id":87,"cat":9,"cod":"SRV-087","nom":"Diseño de interfaz UX/UI","precio":26000.0,"unidad":"Servicio","activo":true},{"id":88,"cat":9,"cod":"SRV-088","nom":"Fotografía de producto","precio":3500.0,"unidad":"Evento","activo":true},{"id":89,"cat":9,"cod":"SRV-089","nom":"Email marketing","precio":2900.0,"unidad":"Mes","activo":true},{"id":90,"cat":9,"cod":"SRV-090","nom":"Diseño de material impreso","precio":2400.0,"unidad":"Servicio","activo":true},{"id":91,"cat":10,"cod":"SRV-091","nom":"Contabilidad mensual persona moral","precio":4800.0,"unidad":"Mes","activo":true},{"id":92,"cat":10,"cod":"SRV-092","nom":"Contabilidad mensual persona física","precio":1800.0,"unidad":"Mes","activo":true},{"id":93,"cat":10,"cod":"SRV-093","nom":"Declaración anual","precio":3500.0,"unidad":"Año","activo":true},{"id":94,"cat":10,"cod":"SRV-094","nom":"Cálculo y timbrado de nómina","precio":85.0,"unidad":"Mes","activo":true},{"id":95,"cat":10,"cod":"SRV-095","nom":"Alta en el RFC y trámites SAT","precio":1500.0,"unidad":"Evento","activo":true},{"id":96,"cat":10,"cod":"SRV-096","nom":"Auditoría contable","precio":45000.0,"unidad":"Servicio","activo":true},{"id":97,"cat":10,"cod":"SRV-097","nom":"Gestión de cuentas por cobrar","precio":6500.0,"unidad":"Mes","activo":true},{"id":98,"cat":10,"cod":"SRV-098","nom":"Elaboración de estados financieros","precio":8500.0,"unidad":"Servicio","activo":true},{"id":99,"cat":10,"cod":"SRV-099","nom":"Asesoría fiscal por hora","precio":1200.0,"unidad":"Hora","activo":true},{"id":100,"cat":10,"cod":"SRV-100","nom":"Regularización fiscal","precio":15000.0,"unidad":"Servicio","activo":true}],"caracteristicas":[{"id":1,"nom":"Modalidad","tipo":"TEXTO","unidad":null},{"id":2,"nom":"Tipo de cobro","tipo":"TEXTO","unidad":null},{"id":3,"nom":"Tiempo de entrega","tipo":"ENTERO","unidad":"días"},{"id":4,"nom":"Garantía","tipo":"ENTERO","unidad":"días"},{"id":5,"nom":"Requiere contrato","tipo":"BOOLEANO","unidad":null},{"id":6,"nom":"Nivel de servicio (SLA)","tipo":"TEXTO","unidad":null},{"id":7,"nom":"Horario de atención","tipo":"TEXTO","unidad":null},{"id":8,"nom":"Vigencia de la tarifa","tipo":"FECHA","unidad":null},{"id":9,"nom":"Lenguaje principal","tipo":"TEXTO","unidad":null},{"id":10,"nom":"Plataforma","tipo":"TEXTO","unidad":null},{"id":11,"nom":"Horas estimadas","tipo":"ENTERO","unidad":"horas"},{"id":12,"nom":"Incluye código fuente","tipo":"BOOLEANO","unidad":null},{"id":13,"nom":"Metodología","tipo":"TEXTO","unidad":null},{"id":14,"nom":"Almacenamiento","tipo":"ENTERO","unidad":"GB"},{"id":15,"nom":"Memoria RAM","tipo":"ENTERO","unidad":"GB"},{"id":16,"nom":"Núcleos vCPU","tipo":"ENTERO","unidad":"núcleos"},{"id":17,"nom":"Transferencia mensual","tipo":"ENTERO","unidad":"GB"},{"id":18,"nom":"Disponibilidad garantizada","tipo":"DECIMAL","unidad":"%"},{"id":19,"nom":"Tiempo de respuesta","tipo":"ENTERO","unidad":"horas"},{"id":20,"nom":"Incidentes incluidos","tipo":"ENTERO","unidad":"tickets"},{"id":21,"nom":"Equipos cubiertos","tipo":"ENTERO","unidad":"equipos"},{"id":22,"nom":"Incluye refacciones","tipo":"BOOLEANO","unidad":null},{"id":23,"nom":"Ancho de banda","tipo":"ENTERO","unidad":"Mbps"},{"id":24,"nom":"Nodos de red","tipo":"ENTERO","unidad":"nodos"},{"id":25,"nom":"Tipo de enlace","tipo":"TEXTO","unidad":null},{"id":26,"nom":"IP fija","tipo":"BOOLEANO","unidad":null},{"id":27,"nom":"Norma de referencia","tipo":"TEXTO","unidad":null},{"id":28,"nom":"Activos evaluados","tipo":"ENTERO","unidad":"activos"},{"id":29,"nom":"Incluye informe ejecutivo","tipo":"BOOLEANO","unidad":null},{"id":30,"nom":"Frecuencia de escaneo","tipo":"TEXTO","unidad":null},{"id":31,"nom":"Volumen de datos","tipo":"ENTERO","unidad":"GB"},{"id":32,"nom":"Fuentes de datos","tipo":"ENTERO","unidad":"fuentes"},{"id":33,"nom":"Herramienta BI","tipo":"TEXTO","unidad":null},{"id":34,"nom":"Frecuencia de actualización","tipo":"TEXTO","unidad":null},{"id":35,"nom":"Duración del curso","tipo":"ENTERO","unidad":"horas"},{"id":36,"nom":"Participantes máximos","tipo":"ENTERO","unidad":"personas"},{"id":37,"nom":"Incluye constancia","tipo":"BOOLEANO","unidad":null},{"id":38,"nom":"Nivel del curso","tipo":"TEXTO","unidad":null},{"id":39,"nom":"Registro STPS DC-3","tipo":"BOOLEANO","unidad":null},{"id":40,"nom":"Entregables","tipo":"ENTERO","unidad":"documentos"},{"id":41,"nom":"Sesiones de seguimiento","tipo":"ENTERO","unidad":"sesiones"},{"id":42,"nom":"Área de negocio","tipo":"TEXTO","unidad":null},{"id":43,"nom":"Consultores asignados","tipo":"ENTERO","unidad":"personas"},{"id":44,"nom":"Propuestas de diseño","tipo":"ENTERO","unidad":"propuestas"},{"id":45,"nom":"Rondas de revisión","tipo":"ENTERO","unidad":"rondas"},{"id":46,"nom":"Redes sociales gestionadas","tipo":"ENTERO","unidad":"redes"},{"id":47,"nom":"Formato de entrega","tipo":"TEXTO","unidad":null},{"id":48,"nom":"Régimen fiscal atendido","tipo":"TEXTO","unidad":null},{"id":49,"nom":"Declaraciones incluidas","tipo":"ENTERO","unidad":"declaraciones"},{"id":50,"nom":"Empleados en nómina","tipo":"ENTERO","unidad":"empleados"}],"sc":[[1,1,"Remoto"],[1,2,"Único"],[1,3,"30"],[1,4,"90"],[1,5,"SI"],[1,6,"Estándar"],[1,7,"12x6"],[1,8,"2027-06-30"],[1,9,"PHP/Laravel"],[1,10,"Web"],[1,11,"120"],[1,12,"SI"],[1,13,"Scrum"],[2,1,"Remoto"],[2,2,"Único"],[2,3,"45"],[2,4,"90"],[2,5,"SI"],[2,6,"Premium"],[2,7,"24x7"],[2,8,"2027-06-30"],[2,9,"JavaScript/React"],[2,10,"Web"],[2,11,"260"],[2,12,"SI"],[2,13,"Scrum"],[3,1,"Remoto"],[3,2,"Único"],[3,3,"90"],[3,4,"90"],[3,5,"SI"],[3,6,"Premium"],[3,7,"24x7"],[3,8,"2027-06-30"],[3,9,"Kotlin/Swift"],[3,10,"Móvil"],[3,11,"480"],[3,12,"SI"],[3,13,"Scrum"],[4,1,"Remoto"],[4,2,"Único"],[4,3,"75"],[4,4,"90"],[4,5,"SI"],[4,6,"Premium"],[4,7,"24x7"],[4,8,"2027-06-30"],[4,9,"C#/.NET"],[4,10,"Web"],[4,11,"380"],[4,12,"SI"],[4,13,"Scrum"],[5,1,"Remoto"],[5,2,"Único"],[5,3,"30"],[5,4,"90"],[5,5,"SI"],[5,6,"Estándar"],[5,7,"12x6"],[5,8,"2027-06-30"],[5,9,"Node.js"],[5,10,"Multiplataforma"],[5,11,"160"],[5,12,"SI"],[5,13,"Kanban"],[6,1,"Remoto"],[6,2,"Por hora"],[6,3,"5"],[6,4,"30"],[6,5,"NO"],[6,6,"Estándar"],[6,7,"12x6"],[6,8,"2027-06-30"],[6,9,"Java/Spring"],[6,10,"Multiplataforma"],[6,11,"1"],[6,12,"NO"],[6,13,"Kanban"],[7,1,"Remoto"],[7,2,"Único"],[7,3,"60"],[7,4,"90"],[7,5,"SI"],[7,6,"Premium"],[7,7,"24x7"],[7,8,"2027-06-30"],[7,9,"Python/Django"],[7,10,"Web"],[7,11,"300"],[7,12,"SI"],[7,13,"Cascada"],[8,1,"Remoto"],[8,2,"Único"],[8,3,"15"],[8,4,"30"],[8,5,"NO"],[8,6,"Estándar"],[8,7,"12x6"],[8,8,"2027-06-30"],[8,9,"Selenium/Cypress"],[8,10,"Multiplataforma"],[8,11,"80"],[8,12,"SI"],[8,13,"Kanban"],[9,1,"Remoto"],[9,2,"Único"],[9,3,"10"],[9,4,"30"],[9,5,"NO"],[9,6,"Básico"],[9,7,"8x5"],[9,8,"2027-06-30"],[9,9,"HTML/CSS"],[9,10,"Web"],[9,11,"40"],[9,12,"SI"],[9,13,"Cascada"],[10,1,"Remoto"],[10,2,"Único"],[10,3,"25"],[10,4,"90"],[10,5,"SI"],[10,6,"Estándar"],[10,7,"12x6"],[10,8,"2027-06-30"],[10,9,"Python/Rasa"],[10,10,"Multiplataforma"],[10,11,"110"],[10,12,"SI"],[10,13,"Scrum"],[11,1,"Remoto"],[11,2,"Mensual"],[11,3,"1"],[11,4,"0"],[11,5,"SI"],[11,6,"Básico"],[11,7,"8x5"],[11,8,"2027-06-30"],[11,14,"10"],[11,15,"1"],[11,16,"1"],[11,17,"100"],[11,18,"99.5"],[12,1,"Remoto"],[12,2,"Mensual"],[12,3,"1"],[12,4,"0"],[12,5,"SI"],[12,6,"Estándar"],[12,7,"12x6"],[12,8,"2027-06-30"],[12,14,"50"],[12,15,"2"],[12,16,"1"],[12,17,"500"],[12,18,"99.9"],[13,1,"Remoto"],[13,2,"Mensual"],[13,3,"1"],[13,4,"0"],[13,5,"SI"],[13,6,"Estándar"],[13,7,"12x6"],[13,8,"2027-06-30"],[13,14,"80"],[13,15,"4"],[13,16,"2"],[13,17,"2000"],[13,18,"99.9"],[14,1,"Remoto"],[14,2,"Mensual"],[14,3,"1"],[14,4,"0"],[14,5,"SI"],[14,6,"Premium"],[14,7,"24x7"],[14,8,"2027-06-30"],[14,14,"320"],[14,15,"16"],[14,16,"8"],[14,17,"5000"],[14,18,"99.95"],[15,1,"Remoto"],[15,2,"Mensual"],[15,3,"3"],[15,4,"0"],[15,5,"SI"],[15,6,"Premium"],[15,7,"24x7"],[15,8,"2027-06-30"],[15,14,"1000"],[15,15,"64"],[15,16,"16"],[15,17,"10000"],[15,18,"99.99"],[16,1,"Remoto"],[16,2,"Anual"],[16,3,"1"],[16,4,"0"],[16,5,"SI"],[16,6,"Básico"],[16,7,"8x5"],[16,8,"2027-06-30"],[16,14,"1"],[16,15,"1"],[16,16,"1"],[16,17,"10"],[16,18,"99.9"],[17,1,"Remoto"],[17,2,"Anual"],[17,3,"2"],[17,4,"0"],[17,5,"SI"],[17,6,"Estándar"],[17,7,"12x6"],[17,8,"2027-06-30"],[17,14,"1"],[17,15,"1"],[17,16,"1"],[17,17,"10"],[17,18,"99.9"],[18,1,"Remoto"],[18,2,"Mensual"],[18,3,"1"],[18,4,"0"],[18,5,"SI"],[18,6,"Estándar"],[18,7,"12x6"],[18,8,"2027-06-30"],[18,14,"500"],[18,15,"2"],[18,16,"1"],[18,17,"200"],[18,18,"99.9"],[19,1,"Remoto"],[19,2,"Mensual"],[19,3,"1"],[19,4,"0"],[19,5,"SI"],[19,6,"Básico"],[19,7,"8x5"],[19,8,"2027-06-30"],[19,14,"25"],[19,15,"1"],[19,16,"1"],[19,17,"50"],[19,18,"99.9"],[20,1,"Remoto"],[20,2,"Único"],[20,3,"20"],[20,4,"90"],[20,5,"SI"],[20,6,"Premium"],[20,7,"24x7"],[20,8,"2027-06-30"],[20,14,"200"],[20,15,"8"],[20,16,"4"],[20,17,"1000"],[20,18,"99.95"],[21,1,"Híbrido"],[21,2,"Mensual"],[21,3,"1"],[21,4,"0"],[21,5,"SI"],[21,6,"Básico"],[21,7,"8x5"],[21,8,"2027-06-30"],[21,19,"8"],[21,20,"10"],[21,21,"10"],[21,22,"NO"],[22,1,"Híbrido"],[22,2,"Mensual"],[22,3,"1"],[22,4,"0"],[22,5,"SI"],[22,6,"Premium"],[22,7,"24x7"],[22,8,"2027-06-30"],[22,19,"2"],[22,20,"99"],[22,21,"50"],[22,22,"SI"],[23,1,"Híbrido"],[23,2,"Por evento"],[23,3,"1"],[23,4,"30"],[23,5,"NO"],[23,6,"Básico"],[23,7,"8x5"],[23,8,"2027-06-30"],[23,19,"24"],[23,20,"1"],[23,21,"1"],[23,22,"NO"],[24,1,"Híbrido"],[24,2,"Por evento"],[24,3,"2"],[24,4,"30"],[24,5,"NO"],[24,6,"Estándar"],[24,7,"12x6"],[24,8,"2027-06-30"],[24,19,"48"],[24,20,"1"],[24,21,"1"],[24,22,"NO"],[25,1,"Híbrido"],[25,2,"Por evento"],[25,3,"3"],[25,4,"30"],[25,5,"NO"],[25,6,"Estándar"],[25,7,"12x6"],[25,8,"2027-06-30"],[25,19,"24"],[25,20,"1"],[25,21,"1"],[25,22,"SI"],[26,1,"Híbrido"],[26,2,"Por evento"],[26,3,"1"],[26,4,"30"],[26,5,"NO"],[26,6,"Básico"],[26,7,"8x5"],[26,8,"2027-06-30"],[26,19,"24"],[26,20,"1"],[26,21,"1"],[26,22,"NO"],[27,1,"Híbrido"],[27,2,"Por evento"],[27,3,"2"],[27,4,"30"],[27,5,"NO"],[27,6,"Básico"],[27,7,"8x5"],[27,8,"2027-06-30"],[27,19,"48"],[27,20,"1"],[27,21,"1"],[27,22,"SI"],[28,1,"Híbrido"],[28,2,"Mensual"],[28,3,"1"],[28,4,"0"],[28,5,"SI"],[28,6,"Estándar"],[28,7,"12x6"],[28,8,"2027-06-30"],[28,19,"4"],[28,20,"50"],[28,21,"30"],[28,22,"NO"],[29,1,"Híbrido"],[29,2,"Por evento"],[29,3,"5"],[29,4,"30"],[29,5,"NO"],[29,6,"Premium"],[29,7,"24x7"],[29,8,"2027-06-30"],[29,19,"24"],[29,20,"1"],[29,21,"1"],[29,22,"NO"],[30,1,"Híbrido"],[30,2,"Por hora"],[30,3,"1"],[30,4,"30"],[30,5,"NO"],[30,6,"Estándar"],[30,7,"12x6"],[30,8,"2027-06-30"],[30,19,"4"],[30,20,"1"],[30,21,"1"],[30,22,"NO"],[31,1,"Presencial"],[31,2,"Por evento"],[31,3,"5"],[31,4,"30"],[31,5,"NO"],[31,6,"Estándar"],[31,7,"12x6"],[31,8,"2027-06-30"],[31,23,"1000"],[31,24,"1"],[31,25,"Cobre"],[31,26,"NO"],[32,1,"Presencial"],[32,2,"Único"],[32,3,"7"],[32,4,"30"],[32,5,"NO"],[32,6,"Estándar"],[32,7,"12x6"],[32,8,"2027-06-30"],[32,23,"1000"],[32,24,"24"],[32,25,"Cobre"],[32,26,"NO"],[33,1,"Presencial"],[33,2,"Único"],[33,3,"10"],[33,4,"30"],[33,5,"NO"],[33,6,"Estándar"],[33,7,"12x6"],[33,8,"2027-06-30"],[33,23,"600"],[33,24,"12"],[33,25,"Inalámbrico"],[33,26,"NO"],[34,1,"Presencial"],[34,2,"Mensual"],[34,3,"15"],[34,4,"0"],[34,5,"SI"],[34,6,"Premium"],[34,7,"24x7"],[34,8,"2027-06-30"],[34,23,"200"],[34,24,"1"],[34,25,"Fibra"],[34,26,"SI"],[35,1,"Presencial"],[35,2,"Único"],[35,3,"5"],[35,4,"30"],[35,5,"NO"],[35,6,"Premium"],[35,7,"24x7"],[35,8,"2027-06-30"],[35,23,"1000"],[35,24,"1"],[35,25,"Fibra"],[35,26,"SI"],[36,1,"Presencial"],[36,2,"Único"],[36,3,"10"],[36,4,"30"],[36,5,"NO"],[36,6,"Estándar"],[36,7,"12x6"],[36,8,"2027-06-30"],[36,23,"100"],[36,24,"20"],[36,25,"Cobre"],[36,26,"NO"],[37,1,"Presencial"],[37,2,"Mensual"],[37,3,"3"],[37,4,"0"],[37,5,"SI"],[37,6,"Premium"],[37,7,"24x7"],[37,8,"2027-06-30"],[37,23,"1000"],[37,24,"50"],[37,25,"Fibra"],[37,26,"NO"],[38,1,"Presencial"],[38,2,"Mensual"],[38,3,"3"],[38,4,"0"],[38,5,"SI"],[38,6,"Estándar"],[38,7,"12x6"],[38,8,"2027-06-30"],[38,23,"100"],[38,24,"10"],[38,25,"Fibra"],[38,26,"SI"],[39,1,"Presencial"],[39,2,"Único"],[39,3,"5"],[39,4,"30"],[39,5,"NO"],[39,6,"Estándar"],[39,7,"12x6"],[39,8,"2027-06-30"],[39,23,"1000"],[39,24,"48"],[39,25,"Cobre"],[39,26,"NO"],[40,1,"Presencial"],[40,2,"Por evento"],[40,3,"5"],[40,4,"30"],[40,5,"NO"],[40,6,"Básico"],[40,7,"8x5"],[40,8,"2027-06-30"],[40,23,"100"],[40,24,"4"],[40,25,"Cobre"],[40,26,"NO"],[41,1,"Híbrido"],[41,2,"Único"],[41,3,"10"],[41,4,"90"],[41,5,"SI"],[41,6,"Estándar"],[41,7,"12x6"],[41,8,"2027-06-30"],[41,27,"OWASP"],[41,28,"20"],[41,29,"SI"],[41,30,"Única"],[42,1,"Híbrido"],[42,2,"Único"],[42,3,"15"],[42,4,"90"],[42,5,"SI"],[42,6,"Premium"],[42,7,"24x7"],[42,8,"2027-06-30"],[42,27,"NIST"],[42,28,"10"],[42,29,"SI"],[42,30,"Única"],[43,1,"Híbrido"],[43,2,"Único"],[43,3,"30"],[43,4,"90"],[43,5,"SI"],[43,6,"Premium"],[43,7,"24x7"],[43,8,"2027-06-30"],[43,27,"ISO 27001"],[43,28,"50"],[43,29,"SI"],[43,30,"Única"],[44,1,"Híbrido"],[44,2,"Mensual"],[44,3,"1"],[44,4,"0"],[44,5,"SI"],[44,6,"Básico"],[44,7,"8x5"],[44,8,"2027-06-30"],[44,27,"NIST"],[44,28,"1"],[44,29,"NO"],[44,30,"Mensual"],[45,1,"Híbrido"],[45,2,"Mensual"],[45,3,"5"],[45,4,"0"],[45,5,"SI"],[45,6,"Premium"],[45,7,"24x7"],[45,8,"2027-06-30"],[45,27,"NIST"],[45,28,"100"],[45,29,"SI"],[45,30,"Mensual"],[46,1,"Híbrido"],[46,2,"Único"],[46,3,"5"],[46,4,"30"],[46,5,"NO"],[46,6,"Estándar"],[46,7,"12x6"],[46,8,"2027-06-30"],[46,27,"ISO 27001"],[46,28,"1"],[46,29,"NO"],[46,30,"Única"],[47,1,"Híbrido"],[47,2,"Único"],[47,3,"20"],[47,4,"90"],[47,5,"SI"],[47,6,"Premium"],[47,7,"24x7"],[47,8,"2027-06-30"],[47,27,"NIST"],[47,28,"30"],[47,29,"SI"],[47,30,"Única"],[48,1,"Híbrido"],[48,2,"Mensual"],[48,3,"2"],[48,4,"0"],[48,5,"SI"],[48,6,"Estándar"],[48,7,"12x6"],[48,8,"2027-06-30"],[48,27,"NIST"],[48,28,"50"],[48,29,"NO"],[48,30,"Mensual"],[49,1,"Híbrido"],[49,2,"Único"],[49,3,"12"],[49,4,"90"],[49,5,"SI"],[49,6,"Estándar"],[49,7,"12x6"],[49,8,"2027-06-30"],[49,27,"OWASP"],[49,28,"5"],[49,29,"SI"],[49,30,"Única"],[50,1,"Híbrido"],[50,2,"Por evento"],[50,3,"15"],[50,4,"90"],[50,5,"SI"],[50,6,"Premium"],[50,7,"24x7"],[50,8,"2027-06-30"],[50,27,"NIST"],[50,28,"3"],[50,29,"SI"],[50,30,"Única"],[51,1,"Remoto"],[51,2,"Único"],[51,3,"15"],[51,4,"90"],[51,5,"SI"],[51,6,"Estándar"],[51,7,"12x6"],[51,8,"2027-06-30"],[51,31,"5"],[51,32,"1"],[51,33,"Metabase"],[51,34,"Mensual"],[52,1,"Remoto"],[52,2,"Mensual"],[52,3,"2"],[52,4,"0"],[52,5,"SI"],[52,6,"Premium"],[52,7,"24x7"],[52,8,"2027-06-30"],[52,31,"200"],[52,32,"3"],[52,33,"Metabase"],[52,34,"Diaria"],[53,1,"Remoto"],[53,2,"Único"],[53,3,"12"],[53,4,"30"],[53,5,"NO"],[53,6,"Estándar"],[53,7,"12x6"],[53,8,"2027-06-30"],[53,31,"10"],[53,32,"4"],[53,33,"Power BI"],[53,34,"Diaria"],[54,1,"Remoto"],[54,2,"Único"],[54,3,"20"],[54,4,"90"],[54,5,"SI"],[54,6,"Estándar"],[54,7,"12x6"],[54,8,"2027-06-30"],[54,31,"50"],[54,32,"6"],[54,33,"Power BI"],[54,34,"Diaria"],[55,1,"Remoto"],[55,2,"Único"],[55,3,"10"],[55,4,"30"],[55,5,"NO"],[55,6,"Básico"],[55,7,"8x5"],[55,8,"2027-06-30"],[55,31,"20"],[55,32,"2"],[55,33,"Metabase"],[55,34,"Mensual"],[56,1,"Remoto"],[56,2,"Único"],[56,3,"30"],[56,4,"90"],[56,5,"SI"],[56,6,"Premium"],[56,7,"24x7"],[56,8,"2027-06-30"],[56,31,"30"],[56,32,"3"],[56,33,"Tableau"],[56,34,"Semanal"],[57,1,"Remoto"],[57,2,"Único"],[57,3,"60"],[57,4,"90"],[57,5,"SI"],[57,6,"Premium"],[57,7,"24x7"],[57,8,"2027-06-30"],[57,31,"500"],[57,32,"8"],[57,33,"Looker"],[57,34,"Diaria"],[58,1,"Remoto"],[58,2,"Mensual"],[58,3,"5"],[58,4,"0"],[58,5,"SI"],[58,6,"Estándar"],[58,7,"12x6"],[58,8,"2027-06-30"],[58,31,"10"],[58,32,"3"],[58,33,"Power BI"],[58,34,"Semanal"],[59,1,"Remoto"],[59,2,"Por hora"],[59,3,"3"],[59,4,"30"],[59,5,"NO"],[59,6,"Estándar"],[59,7,"12x6"],[59,8,"2027-06-30"],[59,31,"100"],[59,32,"1"],[59,33,"Metabase"],[59,34,"Mensual"],[60,1,"Remoto"],[60,2,"Único"],[60,3,"20"],[60,4,"90"],[60,5,"SI"],[60,6,"Premium"],[60,7,"24x7"],[60,8,"2027-06-30"],[60,31,"250"],[60,32,"2"],[60,33,"Metabase"],[60,34,"Mensual"],[61,1,"Presencial"],[61,2,"Por evento"],[61,3,"7"],[61,4,"30"],[61,5,"NO"],[61,6,"Básico"],[61,7,"8x5"],[61,8,"2027-06-30"],[61,35,"16"],[61,36,"20"],[61,37,"SI"],[61,38,"Intermedio"],[61,39,"SI"],[62,1,"Presencial"],[62,2,"Por evento"],[62,3,"7"],[62,4,"30"],[62,5,"NO"],[62,6,"Básico"],[62,7,"8x5"],[62,8,"2027-06-30"],[62,35,"20"],[62,36,"20"],[62,37,"SI"],[62,38,"Avanzado"],[62,39,"SI"],[63,1,"Presencial"],[63,2,"Por evento"],[63,3,"10"],[63,4,"30"],[63,5,"NO"],[63,6,"Estándar"],[63,7,"12x6"],[63,8,"2027-06-30"],[63,35,"40"],[63,36,"15"],[63,37,"SI"],[63,38,"Básico"],[63,39,"SI"],[64,1,"Presencial"],[64,2,"Por evento"],[64,3,"10"],[64,4,"30"],[64,5,"NO"],[64,6,"Estándar"],[64,7,"12x6"],[64,8,"2027-06-30"],[64,35,"30"],[64,36,"15"],[64,37,"SI"],[64,38,"Básico"],[64,39,"SI"],[65,1,"Presencial"],[65,2,"Por evento"],[65,3,"5"],[65,4,"30"],[65,5,"NO"],[65,6,"Básico"],[65,7,"8x5"],[65,8,"2027-06-30"],[65,35,"8"],[65,36,"30"],[65,37,"SI"],[65,38,"Intermedio"],[65,39,"NO"],[66,1,"Presencial"],[66,2,"Por evento"],[66,3,"10"],[66,4,"30"],[66,5,"NO"],[66,6,"Estándar"],[66,7,"12x6"],[66,8,"2027-06-30"],[66,35,"24"],[66,36,"15"],[66,37,"SI"],[66,38,"Intermedio"],[66,39,"SI"],[67,1,"Presencial"],[67,2,"Por evento"],[67,3,"5"],[67,4,"30"],[67,5,"NO"],[67,6,"Básico"],[67,7,"8x5"],[67,8,"2027-06-30"],[67,35,"6"],[67,36,"40"],[67,37,"SI"],[67,38,"Básico"],[67,39,"NO"],[68,1,"Presencial"],[68,2,"Por evento"],[68,3,"14"],[68,4,"30"],[68,5,"NO"],[68,6,"Estándar"],[68,7,"12x6"],[68,8,"2027-06-30"],[68,35,"40"],[68,36,"20"],[68,37,"SI"],[68,38,"Intermedio"],[68,39,"SI"],[69,1,"Presencial"],[69,2,"Por evento"],[69,3,"20"],[69,4,"90"],[69,5,"SI"],[69,6,"Premium"],[69,7,"24x7"],[69,8,"2027-06-30"],[69,35,"120"],[69,36,"25"],[69,37,"SI"],[69,38,"Avanzado"],[69,39,"SI"],[70,1,"Presencial"],[70,2,"Por evento"],[70,3,"10"],[70,4,"30"],[70,5,"NO"],[70,6,"Estándar"],[70,7,"12x6"],[70,8,"2027-06-30"],[70,35,"20"],[70,36,"15"],[70,37,"SI"],[70,38,"Intermedio"],[70,39,"SI"],[71,1,"Híbrido"],[71,2,"Único"],[71,3,"15"],[71,4,"90"],[71,5,"SI"],[71,6,"Estándar"],[71,7,"12x6"],[71,8,"2027-06-30"],[71,40,"3"],[71,41,"2"],[71,42,"Dirección general"],[71,43,"2"],[72,1,"Híbrido"],[72,2,"Único"],[72,3,"30"],[72,4,"90"],[72,5,"SI"],[72,6,"Premium"],[72,7,"24x7"],[72,8,"2027-06-30"],[72,40,"6"],[72,41,"4"],[72,42,"Dirección de TI"],[72,43,"3"],[73,1,"Híbrido"],[73,2,"Por hora"],[73,3,"5"],[73,4,"30"],[73,5,"NO"],[73,6,"Premium"],[73,7,"24x7"],[73,8,"2027-06-30"],[73,40,"1"],[73,41,"1"],[73,42,"Operaciones"],[73,43,"1"],[74,1,"Híbrido"],[74,2,"Único"],[74,3,"20"],[74,4,"90"],[74,5,"SI"],[74,6,"Estándar"],[74,7,"12x6"],[74,8,"2027-06-30"],[74,40,"4"],[74,41,"3"],[74,42,"Procesos"],[74,43,"2"],[75,1,"Híbrido"],[75,2,"Único"],[75,3,"90"],[75,4,"90"],[75,5,"SI"],[75,6,"Premium"],[75,7,"24x7"],[75,8,"2027-06-30"],[75,40,"8"],[75,41,"10"],[75,42,"Operaciones"],[75,43,"4"],[76,1,"Híbrido"],[76,2,"Único"],[76,3,"20"],[76,4,"90"],[76,5,"SI"],[76,6,"Estándar"],[76,7,"12x6"],[76,8,"2027-06-30"],[76,40,"4"],[76,41,"3"],[76,42,"Jurídico"],[76,43,"2"],[77,1,"Híbrido"],[77,2,"Único"],[77,3,"10"],[77,4,"30"],[77,5,"NO"],[77,6,"Básico"],[77,7,"8x5"],[77,8,"2027-06-30"],[77,40,"2"],[77,41,"1"],[77,42,"Compras"],[77,43,"1"],[78,1,"Híbrido"],[78,2,"Mensual"],[78,3,"5"],[78,4,"0"],[78,5,"SI"],[78,6,"Premium"],[78,7,"24x7"],[78,8,"2027-06-30"],[78,40,"4"],[78,41,"4"],[78,42,"PMO"],[78,43,"2"],[79,1,"Híbrido"],[79,2,"Único"],[79,3,"15"],[79,4,"90"],[79,5,"SI"],[79,6,"Estándar"],[79,7,"12x6"],[79,8,"2027-06-30"],[79,40,"3"],[79,41,"2"],[79,42,"Finanzas"],[79,43,"2"],[80,1,"Híbrido"],[80,2,"Único"],[80,3,"30"],[80,4,"90"],[80,5,"SI"],[80,6,"Premium"],[80,7,"24x7"],[80,8,"2027-06-30"],[80,40,"5"],[80,41,"4"],[80,42,"Dirección general"],[80,43,"3"],[81,1,"Remoto"],[81,2,"Único"],[81,3,"10"],[81,4,"30"],[81,5,"NO"],[81,6,"Básico"],[81,7,"8x5"],[81,8,"2027-06-30"],[81,44,"3"],[81,45,"3"],[81,46,"0"],[81,47,"SVG"],[82,1,"Remoto"],[82,2,"Único"],[82,3,"20"],[82,4,"30"],[82,5,"NO"],[82,6,"Estándar"],[82,7,"12x6"],[82,8,"2027-06-30"],[82,44,"2"],[82,45,"3"],[82,46,"0"],[82,47,"PDF"],[83,1,"Remoto"],[83,2,"Mensual"],[83,3,"3"],[83,4,"0"],[83,5,"SI"],[83,6,"Estándar"],[83,7,"12x6"],[83,8,"2027-06-30"],[83,44,"1"],[83,45,"2"],[83,46,"3"],[83,47,"PNG"],[84,1,"Remoto"],[84,2,"Mensual"],[84,3,"3"],[84,4,"0"],[84,5,"SI"],[84,6,"Estándar"],[84,7,"12x6"],[84,8,"2027-06-30"],[84,44,"1"],[84,45,"2"],[84,46,"0"],[84,47,"PDF"],[85,1,"Remoto"],[85,2,"Mensual"],[85,3,"5"],[85,4,"0"],[85,5,"SI"],[85,6,"Estándar"],[85,7,"12x6"],[85,8,"2027-06-30"],[85,44,"1"],[85,45,"2"],[85,46,"0"],[85,47,"PDF"],[86,1,"Remoto"],[86,2,"Único"],[86,3,"15"],[86,4,"90"],[86,5,"SI"],[86,6,"Premium"],[86,7,"24x7"],[86,8,"2027-06-30"],[86,44,"2"],[86,45,"2"],[86,46,"0"],[86,47,"MP4"],[87,1,"Remoto"],[87,2,"Único"],[87,3,"15"],[87,4,"90"],[87,5,"SI"],[87,6,"Premium"],[87,7,"24x7"],[87,8,"2027-06-30"],[87,44,"3"],[87,45,"3"],[87,46,"0"],[87,47,"Fuentes editables"],[88,1,"Remoto"],[88,2,"Por evento"],[88,3,"5"],[88,4,"30"],[88,5,"NO"],[88,6,"Básico"],[88,7,"8x5"],[88,8,"2027-06-30"],[88,44,"1"],[88,45,"1"],[88,46,"0"],[88,47,"PNG"],[89,1,"Remoto"],[89,2,"Mensual"],[89,3,"3"],[89,4,"0"],[89,5,"SI"],[89,6,"Básico"],[89,7,"8x5"],[89,8,"2027-06-30"],[89,44,"1"],[89,45,"2"],[89,46,"0"],[89,47,"PDF"],[90,1,"Remoto"],[90,2,"Único"],[90,3,"5"],[90,4,"30"],[90,5,"NO"],[90,6,"Básico"],[90,7,"8x5"],[90,8,"2027-06-30"],[90,44,"2"],[90,45,"2"],[90,46,"0"],[90,47,"PDF"],[91,1,"Remoto"],[91,2,"Mensual"],[91,3,"5"],[91,4,"0"],[91,5,"SI"],[91,6,"Estándar"],[91,7,"12x6"],[91,8,"2027-06-30"],[91,48,"601"],[91,49,"12"],[91,50,"0"],[92,1,"Remoto"],[92,2,"Mensual"],[92,3,"5"],[92,4,"0"],[92,5,"SI"],[92,6,"Básico"],[92,7,"8x5"],[92,8,"2027-06-30"],[92,48,"612"],[92,49,"12"],[92,50,"0"],[93,1,"Remoto"],[93,2,"Anual"],[93,3,"10"],[93,4,"0"],[93,5,"SI"],[93,6,"Estándar"],[93,7,"12x6"],[93,8,"2027-06-30"],[93,48,"612"],[93,49,"1"],[93,50,"0"],[94,1,"Remoto"],[94,2,"Mensual"],[94,3,"2"],[94,4,"0"],[94,5,"SI"],[94,6,"Estándar"],[94,7,"12x6"],[94,8,"2027-06-30"],[94,48,"601"],[94,49,"0"],[94,50,"1"],[95,1,"Remoto"],[95,2,"Por evento"],[95,3,"3"],[95,4,"30"],[95,5,"NO"],[95,6,"Básico"],[95,7,"8x5"],[95,8,"2027-06-30"],[95,48,"626"],[95,49,"0"],[95,50,"0"],[96,1,"Remoto"],[96,2,"Único"],[96,3,"30"],[96,4,"90"],[96,5,"SI"],[96,6,"Premium"],[96,7,"24x7"],[96,8,"2027-06-30"],[96,48,"601"],[96,49,"0"],[96,50,"0"],[97,1,"Remoto"],[97,2,"Mensual"],[97,3,"3"],[97,4,"0"],[97,5,"SI"],[97,6,"Estándar"],[97,7,"12x6"],[97,8,"2027-06-30"],[97,48,"601"],[97,49,"0"],[97,50,"0"],[98,1,"Remoto"],[98,2,"Único"],[98,3,"10"],[98,4,"30"],[98,5,"NO"],[98,6,"Estándar"],[98,7,"12x6"],[98,8,"2027-06-30"],[98,48,"601"],[98,49,"0"],[98,50,"0"],[99,1,"Remoto"],[99,2,"Por hora"],[99,3,"1"],[99,4,"30"],[99,5,"NO"],[99,6,"Premium"],[99,7,"24x7"],[99,8,"2027-06-30"],[99,48,"612"],[99,49,"0"],[99,50,"0"],[100,1,"Remoto"],[100,2,"Único"],[100,3,"20"],[100,4,"30"],[100,5,"NO"],[100,6,"Premium"],[100,7,"24x7"],[100,8,"2027-06-30"],[100,48,"626"],[100,49,"6"],[100,50,"0"]],"clientes":[{"id":1,"nom":"Comercializadora del Valle de México SA de CV","rfc":"CMA180315KJ2"},{"id":2,"nom":"Tecnologías Integrales del Norte SA de CV","rfc":"TEC200110AB5"},{"id":3,"nom":"Farmacias Regionales del Bajío SA de CV","rfc":"FAR150722PQ8"},{"id":4,"nom":"Jorge Gómez Martínez","rfc":"GOMJ850412HT3"},{"id":5,"nom":"Andrea López Pérez","rfc":"LOPA900823MN1"},{"id":6,"nom":"Educación Superior Digital AC","rfc":"EDU100505RT7"},{"id":7,"nom":"Constructora Peninsular SA de CV","rfc":"CON170918XY4"},{"id":8,"nom":"Alimentos Selectos de Occidente SA de CV","rfc":"ALI190601GH9"},{"id":9,"nom":"Transportes Rápidos del Golfo SA de CV","rfc":"TRA160214LM3"},{"id":10,"nom":"Hospital San Rafael SC","rfc":"HOS210330CD6"},{"id":11,"nom":"Sofía Ramírez Sánchez","rfc":"RAMS880115KL5"},{"id":12,"nom":"Distribuidora Ferretera Central SA de CV","rfc":"DIS140808EF2"},{"id":13,"nom":"Agroindustrias de Sinaloa SPR de RL","rfc":"AGR120420ST8"},{"id":14,"nom":"Hermanos Torres Muebles SA de CV","rfc":"HER950707QW4"},{"id":15,"nom":"Daniel Mercado Ruiz","rfc":"MERD920302PL7"},{"id":16,"nom":"Servicios Logísticos Integrados SA de CV","rfc":"SER180912UV1"},{"id":17,"nom":"Clínica Dental Sonrisa SC","rfc":"CLI200225ZX3"},{"id":18,"nom":"Inmobiliaria Horizonte SA de CV","rfc":"INM110630BN6"},{"id":19,"nom":"Laura Vega Luna","rfc":"VEGL870918RS2"},{"id":20,"nom":"Restaurantes La Tradición SA de CV","rfc":"RES230115TY5"}],"empleados":[{"id":1,"nom":"Laura Méndez Ríos","puesto":"Gerente"},{"id":2,"nom":"Ana Torres Vega","puesto":"Facturista"},{"id":3,"nom":"Carlos Ruiz Pineda","puesto":"Cajero"},{"id":4,"nom":"Diego Salas Ortega","puesto":"Auxiliar"}],"metodos":[{"id":1,"nom":"Efectivo","activo":true},{"id":2,"nom":"Transferencia SPEI","activo":true},{"id":3,"nom":"Tarjeta de crédito","activo":true},{"id":4,"nom":"Tarjeta de débito","activo":true},{"id":5,"nom":"Cheque nominativo","activo":false}],"facturas":[{"id":1,"cli":1,"emp":2,"folio":"F-000001","emision":"2026-11-19T16:12:12.781802","venc":"2026-11-19T16:12:12.781802","estado":"PAGADA"},{"id":2,"cli":2,"emp":2,"folio":"F-000002","emision":"2026-11-19T16:12:12.781802","venc":"2026-12-19T16:12:12.781802","estado":"EMITIDA"},{"id":3,"cli":4,"emp":2,"folio":"F-000003","emision":"2026-11-19T16:12:12.781802","venc":"2026-12-04T16:12:12.781802","estado":"CANCELADA"},{"id":4,"cli":6,"emp":2,"folio":"F-000004","emision":"2026-11-19T16:12:12.781802","venc":"2026-12-19T16:12:12.781802","estado":"EMITIDA"},{"id":5,"cli":11,"emp":2,"folio":"F-000005","emision":"2026-11-19T16:12:12.781802","venc":"2026-11-19T16:12:12.781802","estado":"EMITIDA"},{"id":6,"cli":10,"emp":2,"folio":"F-000006","emision":null,"venc":null,"estado":"BORRADOR"}],"detalle":[{"id":1,"fac":1,"serv":1,"cant":1,"precio":35000.0,"desc":0.0,"sub":35000.0},{"id":2,"fac":1,"serv":11,"cant":12,"precio":149.0,"desc":178.8,"sub":1609.2},{"id":3,"fac":2,"serv":4,"cant":1,"precio":95000.0,"desc":4750.0,"sub":90250.0},{"id":4,"fac":2,"serv":53,"cant":3,"precio":16500.0,"desc":0.0,"sub":49500.0},{"id":5,"fac":3,"serv":23,"cant":2,"precio":650.0,"desc":0.0,"sub":1300.0},{"id":6,"fac":4,"serv":63,"cant":2,"precio":7500.0,"desc":0.0,"sub":15000.0},{"id":7,"fac":4,"serv":65,"cant":1,"precio":3200.0,"desc":480.0,"sub":2720.0},{"id":8,"fac":5,"serv":99,"cant":2,"precio":1200.0,"desc":0.0,"sub":2400.0},{"id":9,"fac":6,"serv":41,"cant":1,"precio":22000.0,"desc":0.0,"sub":22000.0}],"pagos":[{"id":1,"fac":1,"met":2,"fecha":"2026-11-19T16:12:12.781802","monto":42466.67,"ref":"SPEI-000123","estado":"APLICADO"},{"id":2,"fac":2,"met":2,"fecha":"2026-11-19T16:12:12.781802","monto":50000.0,"ref":"SPEI-000456","estado":"APLICADO"},{"id":3,"fac":2,"met":3,"fecha":"2026-11-19T16:12:12.781802","monto":30000.0,"ref":"TC-778812","estado":"APLICADO"},{"id":4,"fac":5,"met":1,"fecha":"2026-11-19T16:12:12.781802","monto":2784.0,"ref":"CAJA-0091","estado":"CANCELADO"}]};
+const IVA = 0.16;
+const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+const money = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fdate = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }); };
+
+let DB, LOG, ui;
+function reset() {
+  DB = JSON.parse(JSON.stringify(SEED));
+  DB.scMap = {};
+  for (const [s, c, v] of DB.sc) (DB.scMap[s] ||= []).push([c, v]);
+  LOG = [];
+  ui = { cat: 0, q: '', servSel: null, facSel: null, draft: null, filtro: 'TODAS' };
+}
+
+// ---------- capa de "procedimientos almacenados" ----------
+class RN extends Error {}
+const rule = (cond, msg) => { if (!cond) throw new RN(msg); };
+const emp = id => DB.empleados.find(e => e.id === id);
+const puede = (id, puestos) => puestos.includes(emp(id)?.puesto);
+const fac = id => DB.facturas.find(f => f.id === id);
+const serv = id => DB.servicios.find(s => s.id === id);
+const cli = id => DB.clientes.find(c => c.id === id);
+const nextId = arr => arr.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+function totales(f) {
+  const sub = r2(DB.detalle.filter(d => d.fac === f.id).reduce((a, d) => a + d.sub, 0));
+  const imp = r2(sub * IVA);
+  return { sub, imp, total: r2(sub + imp) };
+}
+function saldo(f) {
+  if (f.estado === 'CANCELADA') return 0;
+  const pag = DB.pagos.filter(p => p.fac === f.id && p.estado === 'APLICADO').reduce((a, p) => a + p.monto, 0);
+  return r2(totales(f).total - pag);
+}
+function call(sql, fn) {
+  const t = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  try {
+    const out = fn();
+    LOG.unshift({ t, sql, ok: true, res: out?.res ?? 'CALL' });
+    toast(out?.msg ?? 'Operación realizada', true);
+    return out;
+  } catch (e) {
+    const msg = e instanceof RN ? e.message : 'Error: ' + e.message;
+    LOG.unshift({ t, sql, ok: false, res: 'ERROR:  ' + msg });
+    toast(msg, false);
+    return null;
+  } finally { renderLog(); }
+}
+const SP = {
+  crearFactura(idCli, idEmp) {
+    return call(`CALL sp_crear_factura(${idCli}, ${idEmp});`, () => {
+      rule(cli(idCli), `RN-10: El cliente ${idCli} no existe o está inactivo`);
+      rule(puede(idEmp, ['Facturista', 'Gerente']), `RN-10: El empleado ${idEmp} no puede facturar`);
+      const n = DB.facturas.reduce((m, f) => Math.max(m, parseInt(f.folio.slice(2), 10)), 0) + 1;
+      const f = { id: nextId(DB.facturas), cli: idCli, emp: idEmp, folio: 'F-' + String(n).padStart(6, '0'), emision: null, venc: null, estado: 'BORRADOR' };
+      DB.facturas.push(f);
+      return { f, res: ` p_id_factura\n--------------\n ${f.id}`, msg: `Borrador ${f.folio} creado` };
+    });
+  },
+  agregarDetalle(idFac, idServ, cant, pct) {
+    return call(`CALL sp_agregar_detalle(${idFac}, ${idServ}, ${cant}, ${pct});`, () => {
+      const f = fac(idFac);
+      rule(f.estado === 'BORRADOR', `RN-12: La factura está ${f.estado}; sólo se modifica en BORRADOR`);
+      const s = serv(idServ);
+      rule(s && s.activo, `RN-13: El servicio ${idServ} no existe o está inactivo`);
+      rule(Number.isInteger(cant) && cant > 0, 'RN-13: La cantidad debe ser mayor a cero');
+      rule(pct >= 0 && pct <= 50, 'RN-14: El descuento debe estar entre 0 y 50 %');
+      const desc = r2(cant * s.precio * pct / 100);
+      const d = { id: nextId(DB.detalle), fac: idFac, serv: idServ, cant, precio: s.precio, desc, sub: r2(r2(cant * s.precio) - desc) };
+      DB.detalle.push(d);
+      return { res: ` p_id_detalle\n--------------\n ${d.id}`, msg: `${s.nom} agregado` };
+    });
+  },
+  eliminarDetalle(idDet) {
+    return call(`CALL sp_eliminar_detalle(${idDet});`, () => {
+      const d = DB.detalle.find(x => x.id === idDet);
+      const f = fac(d.fac);
+      rule(f.estado === 'BORRADOR', `RN-12: La factura está ${f.estado}; sólo se modifica en BORRADOR`);
+      DB.detalle = DB.detalle.filter(x => x.id !== idDet);
+      return { msg: 'Concepto eliminado' };
+    });
+  },
+  emitir(idFac, dias) {
+    return call(`CALL sp_emitir_factura(${idFac}, ${dias});`, () => {
+      const f = fac(idFac);
+      rule(f.estado === 'BORRADOR', `RN-12: La factura ya está ${f.estado}`);
+      rule(totales(f).total > 0, 'RN-16: La factura no tiene conceptos o su total es cero');
+      rule(dias >= 0 && dias <= 90, 'RN-17: Los días de crédito deben estar entre 0 y 90');
+      const now = new Date();
+      const vencida = DB.facturas.some(o => o.cli === f.cli && o.estado === 'EMITIDA' && new Date(o.venc) < now && saldo(o) > 0);
+      rule(!vencida, 'RN-18: El cliente tiene facturas vencidas con saldo pendiente');
+      f.estado = 'EMITIDA'; f.emision = now.toISOString(); f.venc = new Date(now.getTime() + dias * 864e5).toISOString();
+      return { msg: `${f.folio} emitida por ${money.format(totales(f).total)}` };
+    });
+  },
+  pagar(idFac, idMet, monto, ref, idEmp) {
+    return call(`CALL sp_registrar_pago(${idFac}, ${idMet}, ${monto}, '${ref}', ${idEmp});`, () => {
+      const f = fac(idFac);
+      rule(f.estado === 'EMITIDA', `RN-19: No se puede abonar a una factura ${f.estado}`);
+      rule(puede(idEmp, ['Cajero', 'Gerente']), `RN-19: El empleado ${idEmp} no puede registrar pagos`);
+      rule(DB.metodos.find(m => m.id === idMet)?.activo, `RN-20: El método de pago ${idMet} no existe o está inactivo`);
+      const s = saldo(f);
+      rule(monto > 0 && monto <= s, `RN-21: Monto ${monto} inválido (saldo ${s.toFixed(2)})`);
+      const p = { id: nextId(DB.pagos), fac: idFac, met: idMet, fecha: new Date().toISOString(), monto: r2(monto), ref, estado: 'APLICADO' };
+      DB.pagos.push(p);
+      if (saldo(f) === 0) f.estado = 'PAGADA';
+      return { res: ` p_id_pago\n-----------\n ${p.id}`, msg: f.estado === 'PAGADA' ? `${f.folio} quedó PAGADA` : `Abono registrado; saldo ${money.format(saldo(f))}` };
+    });
+  },
+  cancelarPago(idPago, idEmp) {
+    return call(`CALL sp_cancelar_pago(${idPago}, ${idEmp});`, () => {
+      const p = DB.pagos.find(x => x.id === idPago);
+      rule(p.estado === 'APLICADO', `RN-23: El pago ya está ${p.estado}`);
+      rule(puede(idEmp, ['Gerente']), 'RN-23: Sólo un Gerente puede cancelar pagos');
+      p.estado = 'CANCELADO';
+      const f = fac(p.fac); if (f.estado === 'PAGADA') f.estado = 'EMITIDA';
+      return { msg: 'Pago cancelado; la factura vuelve a EMITIDA' };
+    });
+  },
+  cancelarFactura(idFac, idEmp) {
+    return call(`CALL sp_cancelar_factura(${idFac}, ${idEmp});`, () => {
+      const f = fac(idFac);
+      rule(f.estado === 'EMITIDA', `RN-24: Sólo se cancela una factura EMITIDA (está ${f.estado})`);
+      rule(!DB.pagos.some(p => p.fac === idFac && p.estado === 'APLICADO'), 'RN-24: La factura tiene pagos aplicados; cancélelos primero');
+      rule(puede(idEmp, ['Gerente']), 'RN-24: Sólo un Gerente puede cancelar facturas');
+      f.estado = 'CANCELADA';
+      return { msg: `${f.folio} cancelada` };
+    });
+  },
+};
+
+// ---------- interfaz ----------
+let toastTimer;
+function toast(msg, ok) {
+  const el = $('#toast'); el.className = 'toast ' + (ok ? 'ok' : 'err'); el.textContent = msg;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.className = ''; el.textContent = ''; }, 4200);
+}
+function renderLog() {
+  $('#log').innerHTML = LOG.length ? LOG.map(e => `<div class="entry ${e.ok ? 'ok' : 'err'}"><time>${e.t}</time><div class="sql">${esc(e.sql)}</div><div class="res">${esc(e.res)}</div></div>`).join('')
+    : '<div class="entry"><div class="res" style="color:var(--console-muted)">Aún no hay llamadas. Crea una factura o registra un pago.</div></div>';
+}
+const actor = () => parseInt($('#actor').value, 10);
+const pill = s => `<span class="pill st-${s}">${s}</span>`;
+
+function vPanel() {
+  const fs = DB.facturas;
+  const cnt = e => fs.filter(f => f.estado === e).length;
+  const porCobrar = r2(fs.filter(f => f.estado === 'EMITIDA').reduce((a, f) => a + saldo(f), 0));
+  const cobrado = r2(DB.pagos.filter(p => p.estado === 'APLICADO').reduce((a, p) => a + p.monto, 0));
+  const ventas = {};
+  for (const d of DB.detalle) { const f = fac(d.fac); if (!['EMITIDA', 'PAGADA'].includes(f.estado)) continue; const c = serv(d.serv).cat; ventas[c] = r2((ventas[c] || 0) + d.sub); }
+  const vs = Object.entries(ventas).map(([c, v]) => ({ c: DB.categorias.find(x => x.id == c).nombre, v })).sort((a, b) => b.v - a.v);
+  const max = Math.max(1, ...vs.map(x => x.v));
+  return `
+  <div class="reqs" aria-label="Requisitos del proyecto">
+    <span class="req"><b>✓</b> 10 tablas (mín. 8)</span><span class="req"><b>✓</b> 13 procedimientos (mín. 10)</span>
+    <span class="req"><b>✓</b> ${DB.servicios.length} servicios (mín. 100)</span><span class="req"><b>✓</b> ${DB.caracteristicas.length} características (mín. 50)</span>
+    <span class="req"><b>✓</b> ${DB.sc.length.toLocaleString('es-MX')} valores servicio-característica</span>
+  </div>
+  <div class="tiles">
+    <div class="tile"><span>Por cobrar</span><b>${money.format(porCobrar)}</b><small>${cnt('EMITIDA')} facturas emitidas</small></div>
+    <div class="tile"><span>Cobrado</span><b>${money.format(cobrado)}</b><small>${DB.pagos.filter(p => p.estado === 'APLICADO').length} pagos aplicados</small></div>
+    <div class="tile"><span>Pagadas</span><b>${cnt('PAGADA')}</b><small>Canceladas: ${cnt('CANCELADA')}</small></div>
+    <div class="tile"><span>Borradores</span><b>${cnt('BORRADOR')}</b><small>en edición</small></div>
+  </div>
+  <div class="grid2">
+    <section class="card"><h2>Ventas netas por categoría</h2>
+      <div class="bars">${vs.length ? vs.map(x => `<div class="bar"><span>${esc(x.c)}</span><div class="track"><div class="fill" style="width:${(x.v / max * 100).toFixed(1)}%"></div></div><span class="num">${money.format(x.v)}</span></div>`).join('') : '<p class="empty">Sin ventas emitidas.</p>'}</div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">Equivale a <span class="mono">SELECT * FROM vw_ventas_categoria;</span></p>
+    </section>
+    <section class="card"><h2>Flujo para la demo</h2>
+      <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>En <a href="#catalogo">Catálogo</a>, abre un servicio y revisa su ficha técnica.</li>
+        <li>En <a href="#nueva">Nueva factura</a>, elige cliente, agrega conceptos y emite.</li>
+        <li>En <a href="#facturas">Facturas y cobranza</a>, registra un abono y luego otro hasta liquidarla.</li>
+        <li>Cambia «Actuando como» a <b>Diego Salas (Auxiliar)</b> e intenta facturar: la regla RN-10 lo impide.</li>
+        <li>Como Cajero, intenta cancelar una factura: RN-24 exige un Gerente.</li>
+      </ol>
+    </section>
+  </div>`;
+}
+
+function vCatalogo() {
+  const q = ui.q.trim().toLowerCase();
+  const list = DB.servicios.filter(s => (!ui.cat || s.cat === ui.cat) && (!q || s.nom.toLowerCase().includes(q) || s.cod.toLowerCase().includes(q)));
+  const sel = ui.servSel && serv(ui.servSel);
+  const ficha = sel ? (DB.scMap[sel.id] || []).map(([c, v]) => { const k = DB.caracteristicas[c - 1]; return `<dt>${esc(k.nom)}</dt><dd>${esc(v)}${k.unidad ? ' ' + esc(k.unidad) : ''}</dd>`; }).join('') : '';
+  return `
+  <section class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">Catálogo de servicios <span class="muted" style="font-weight:400">· ${list.length} de ${DB.servicios.length}</span></h2>
+      <label class="f" style="min-width:240px">Buscar<input id="q" type="search" value="${esc(ui.q)}" placeholder="Nombre o código (SRV-013)"></label>
+    </div>
+    <div class="chips" role="group" aria-label="Categorías">
+      <button class="chip" type="button" data-cat="0" aria-pressed="${!ui.cat}">Todas</button>
+      ${DB.categorias.map(c => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${ui.cat === c.id}">${esc(c.nombre)}</button>`).join('')}
+    </div>
+  </section>
+  <div class="grid2">
+    <section class="card"><div class="scroll"><table>
+      <thead><tr><th>Código</th><th>Servicio</th><th>Unidad</th><th class="num">Precio</th></tr></thead>
+      <tbody>${list.map(s => `<tr class="click ${ui.servSel === s.id ? 'sel' : ''}" tabindex="0" data-serv="${s.id}"><td class="mono">${s.cod}</td><td>${esc(s.nom)}</td><td>${s.unidad}</td><td class="num">${money.format(s.precio)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Sin resultados.</td></tr>'}</tbody>
+    </table></div></section>
+    <section class="card">${sel ? `
+      <h3>Ficha técnica · ${sel.cod}</h3>
+      <h2>${esc(sel.nom)}</h2>
+      <p class="muted" style="margin:-6px 0 12px">${esc(DB.categorias.find(c => c.id === sel.cat).nombre)} · ${money.format(sel.precio)} por ${sel.unidad.toLowerCase()} + IVA</p>
+      <dl class="kv">${ficha}</dl>
+      <p class="muted" style="margin:12px 0 0;font-size:12px">${(DB.scMap[sel.id] || []).length} características · <span class="mono">vw_ficha_servicio</span></p>`
+      : '<p class="empty">Selecciona un servicio para ver sus características.</p>'}</section>
+  </div>`;
+}
+
+function vNueva() {
+  const f = ui.draft && fac(ui.draft);
+  const paso = !f ? 1 : f.estado === 'BORRADOR' ? 2 : 3;
+  const steps = `<div class="steps"><span class="step ${paso === 1 ? 'on' : 'done'}">1 · Cliente</span><span class="step ${paso === 2 ? 'on' : paso > 2 ? 'done' : ''}">2 · Conceptos</span><span class="step ${paso === 3 ? 'done' : ''}">3 · Emitir</span></div>`;
+  if (!f) return `<section class="card"><h2>Nueva factura</h2>${steps}
+    <div class="row" style="margin-top:16px">
+      <label class="f" style="flex:1;min-width:260px">Cliente<select id="nf-cli">${DB.clientes.map(c => `<option value="${c.id}">${esc(c.nom)} · ${c.rfc}</option>`).join('')}</select></label>
+      <button class="btn primary" id="nf-crear" type="button">Crear borrador</button>
+    </div>
+    <p class="muted" style="margin:10px 0 0;font-size:12.5px">La factura la elabora el empleado de «Actuando como». Sólo Facturista o Gerente pueden crearla (RN-10).</p></section>`;
+  const t = totales(f), lines = DB.detalle.filter(d => d.fac === f.id), c = cli(f.cli);
+  return `<section class="card">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${f.folio} · ${esc(c.nom)}</h2>${pill(f.estado)}</div>
+    <div style="margin-top:10px">${steps}</div></section>
+  ${f.estado === 'BORRADOR' ? `<section class="card"><h2>Agregar concepto</h2>
+    <div class="row">
+      <label class="f" style="flex:1;min-width:240px">Servicio<select id="nf-serv">${DB.categorias.map(cat => `<optgroup label="${esc(cat.nombre)}">${DB.servicios.filter(s => s.cat === cat.id).map(s => `<option value="${s.id}">${s.cod} · ${esc(s.nom)} · ${money.format(s.precio)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+      <label class="f" style="width:90px">Cantidad<input id="nf-cant" type="number" min="1" step="1" value="1"></label>
+      <label class="f" style="width:110px">Descuento %<input id="nf-pct" type="number" min="0" max="100" step="1" value="0"></label>
+      <button class="btn primary" id="nf-add" type="button">Agregar</button>
+    </div></section>` : ''}
+  <section class="card"><h2>Conceptos</h2>
+    <div class="scroll" style="max-height:none"><table>
+      <thead><tr><th>Servicio</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Descuento</th><th class="num">Subtotal</th>${f.estado === 'BORRADOR' ? '<th></th>' : ''}</tr></thead>
+      <tbody>${lines.map(d => `<tr><td>${esc(serv(d.serv).nom)}</td><td class="num">${d.cant}</td><td class="num">${money.format(d.precio)}</td><td class="num">${money.format(d.desc)}</td><td class="num">${money.format(d.sub)}</td>${f.estado === 'BORRADOR' ? `<td class="num"><button class="btn small" type="button" data-deldet="${d.id}">Quitar</button></td>` : ''}</tr>`).join('') || '<tr><td colspan="6" class="empty">Agrega al menos un servicio.</td></tr>'}</tbody>
+    </table></div>
+    <div class="totals" style="margin-top:12px"><span>Subtotal</span><span class="num">${money.format(t.sub)}</span><span>IVA 16 %</span><span class="num">${money.format(t.imp)}</span><span class="grand">Total</span><span class="num grand">${money.format(t.total)}</span></div>
+  </section>
+  ${f.estado === 'BORRADOR' ? `<section class="card"><h2>Emitir</h2><div class="row">
+      <label class="f" style="width:180px">Días de crédito<select id="nf-dias"><option value="0">0 · de contado</option><option value="15">15 días</option><option value="30" selected>30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></label>
+      <button class="btn primary" id="nf-emitir" type="button">Emitir factura</button>
+    </div></section>` : `<section class="card"><p style="margin:0">Factura emitida el ${fdate(f.emision)}; vence el ${fdate(f.venc)}. <button class="btn small" type="button" data-gofac="${f.id}">Ir a cobranza</button> <button class="btn small" type="button" id="nf-otra">Crear otra</button></p></section>`}`;
+}
+
+function vFacturas() {
+  const est = ['TODAS', 'BORRADOR', 'EMITIDA', 'PAGADA', 'CANCELADA'];
+  const list = DB.facturas.filter(f => ui.filtro === 'TODAS' || f.estado === ui.filtro).slice().reverse();
+  const f = ui.facSel && fac(ui.facSel);
+  let det = '<p class="empty">Selecciona una factura para ver su detalle, sus pagos y las acciones disponibles.</p>';
+  if (f) {
+    const t = totales(f), s = saldo(f), c = cli(f.cli), lines = DB.detalle.filter(d => d.fac === f.id), pagos = DB.pagos.filter(p => p.fac === f.id);
+    det = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${f.folio}</h2>${pill(f.estado)}</div>
+    <dl class="kv" style="margin:12px 0">
+      <dt>Cliente</dt><dd>${esc(c.nom)} <span class="mono muted">${c.rfc}</span></dd>
+      <dt>Elaboró</dt><dd>${esc(emp(f.emp).nom)}</dd>
+      <dt>Emisión</dt><dd>${fdate(f.emision)}</dd><dt>Vencimiento</dt><dd>${fdate(f.venc)}</dd>
+    </dl>
+    <table><thead><tr><th>Concepto</th><th class="num">Cant.</th><th class="num">Subtotal</th></tr></thead>
+    <tbody>${lines.map(d => `<tr><td>${esc(serv(d.serv).nom)}</td><td class="num">${d.cant}</td><td class="num">${money.format(d.sub)}</td></tr>`).join('')}</tbody></table>
+    <div class="totals" style="margin:10px 0 16px"><span>Subtotal</span><span class="num">${money.format(t.sub)}</span><span>IVA 16 %</span><span class="num">${money.format(t.imp)}</span><span class="grand">Total</span><span class="num grand">${money.format(t.total)}</span><span><b>Saldo</b></span><span class="num"><b>${money.format(s)}</b></span></div>
+    <h3>Pagos</h3>
+    ${pagos.length ? `<table><thead><tr><th>Fecha</th><th>Método</th><th>Referencia</th><th class="num">Monto</th><th>Estado</th><th></th></tr></thead><tbody>${pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${esc(DB.metodos.find(m => m.id === p.met).nom)}</td><td class="mono">${esc(p.ref)}</td><td class="num">${money.format(p.monto)}</td><td>${pill(p.estado)}</td><td>${p.estado === 'APLICADO' ? `<button class="btn small" type="button" data-cpago="${p.id}">Cancelar</button>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin:0 0 8px">Sin pagos.</p>'}
+    ${f.estado === 'EMITIDA' ? `<h3 style="margin-top:16px">Registrar abono</h3><div class="row">
+      <label class="f" style="flex:1;min-width:150px">Método<select id="pg-met">${DB.metodos.map(m => `<option value="${m.id}">${esc(m.nom)}${m.activo ? '' : ' (inactivo)'}</option>`).join('')}</select></label>
+      <label class="f" style="width:130px">Monto<input id="pg-monto" type="number" min="0" step="0.01" value="${s.toFixed(2)}"></label>
+      <label class="f" style="width:130px">Referencia<input id="pg-ref" type="text" value="SPEI-${String(Date.now()).slice(-6)}"></label>
+      <button class="btn primary" id="pg-go" type="button">Registrar pago</button></div>` : ''}
+    <div class="row" style="margin-top:16px">
+      ${f.estado === 'BORRADOR' ? `<button class="btn" type="button" data-edit="${f.id}">Continuar edición</button>` : ''}
+      ${f.estado === 'EMITIDA' ? `<button class="btn danger" type="button" id="cf-go">Cancelar factura</button>` : ''}
+    </div>`;
+  }
+  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Facturas</h2>
+    <div class="chips" role="group" aria-label="Filtrar por estado">${est.map(e => `<button class="chip" type="button" data-filtro="${e}" aria-pressed="${ui.filtro === e}">${e === 'TODAS' ? 'Todas' : e.charAt(0) + e.slice(1).toLowerCase()}</button>`).join('')}</div></div>
+    <div class="scroll"><table><thead><tr><th>Folio</th><th>Cliente</th><th>Vence</th><th class="num">Total</th><th class="num">Saldo</th><th>Estado</th></tr></thead>
+    <tbody>${list.map(x => `<tr class="click ${ui.facSel === x.id ? 'sel' : ''}" tabindex="0" data-fac="${x.id}"><td class="mono">${x.folio}</td><td>${esc(cli(x.cli).nom)}</td><td>${fdate(x.venc)}</td><td class="num">${money.format(totales(x).total)}</td><td class="num">${money.format(saldo(x))}</td><td>${pill(x.estado)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No hay facturas en este estado.</td></tr>'}</tbody></table></div></section>
+  <section class="card">${det}</section>`;
+}
+
+const VIEWS = { panel: vPanel, catalogo: vCatalogo, nueva: vNueva, facturas: vFacturas };
+function route() { const h = location.hash.slice(1); return VIEWS[h] ? h : 'panel'; }
+function render() {
+  const r = route();
+  document.querySelectorAll('#nav a').forEach(a => { if (a.getAttribute('href') === '#' + r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  const focusQ = document.activeElement?.id === 'q';
+  $('#view').innerHTML = VIEWS[r]();
+  if (focusQ) { const q = $('#q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+}
+
+// eventos (delegados)
+$('#view').addEventListener('click', e => {
+  const t = e.target.closest('button, tr[data-serv], tr[data-fac]'); if (!t) return;
+  const d = t.dataset;
+  if (d.cat !== undefined) { ui.cat = +d.cat; ui.servSel = null; }
+  else if (d.serv) ui.servSel = +d.serv;
+  else if (d.fac) ui.facSel = +d.fac;
+  else if (d.filtro) ui.filtro = d.filtro;
+  else if (d.deldet) SP.eliminarDetalle(+d.deldet);
+  else if (d.cpago) SP.cancelarPago(+d.cpago, actor());
+  else if (d.gofac) { ui.facSel = +d.gofac; location.hash = 'facturas'; return; }
+  else if (d.edit) { ui.draft = +d.edit; location.hash = 'nueva'; return; }
+  else if (t.id === 'nf-crear') { const r = SP.crearFactura(+$('#nf-cli').value, actor()); if (r) ui.draft = r.f.id; }
+  else if (t.id === 'nf-add') SP.agregarDetalle(ui.draft, +$('#nf-serv').value, Number($('#nf-cant').value), Number($('#nf-pct').value));
+  else if (t.id === 'nf-emitir') SP.emitir(ui.draft, +$('#nf-dias').value);
+  else if (t.id === 'nf-otra') ui.draft = null;
+  else if (t.id === 'pg-go') SP.pagar(ui.facSel, +$('#pg-met').value, Number($('#pg-monto').value), $('#pg-ref').value.trim(), actor());
+  else if (t.id === 'cf-go') SP.cancelarFactura(ui.facSel, actor());
+  else return;
+  render();
+});
+$('#view').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-serv], tr[data-fac]')) e.target.click(); });
+$('#view').addEventListener('input', e => { if (e.target.id === 'q') { ui.q = e.target.value; render(); } });
+window.addEventListener('hashchange', render);
+$('#reset').addEventListener('click', () => { const a = $('#actor').value; reset(); $('#actor').value = a; renderLog(); render(); toast('Datos reiniciados a la carga inicial', true); });
+
+reset();
+$('#actor').innerHTML = DB.empleados.map(e => `<option value="${e.id}">${esc(e.nom)} (${e.puesto})</option>`).join('');
+$('#actor').value = '2';
+renderLog();
+render();
+</script>
+</body>
+</html>
