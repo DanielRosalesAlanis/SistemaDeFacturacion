@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, activo with context %}
+{% block titulo %}Clientes{% endblock %}
+{% block contenido %}
+<h1>Clientes</h1>
+<p class="sub">{{ clientes | length }} clientes registrados.</p>
+
+<section class="tarjeta tabla-scroll">
+  <table>
+    <thead><tr><th>#</th><th>Cliente</th><th>RFC</th><th>Persona</th><th>Correo</th><th>Condiciones</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for c in clientes %}
+      <tr>
+        <td>{{ c.id_cliente }}</td><td>{{ c.cliente }}</td><td>{{ c.rfc }}</td><td>{{ c.persona | capitalize }}</td><td>{{ c.correo }}</td>
+        <td>
+          {% if c.descuento_pct > 0 %}Descuento {{ c.descuento_pct }} %{% endif %}
+          {% if c.retiene_isr %}<br>Retiene ISR{% endif %}{% if c.retiene_iva %}<br>Retiene IVA{% endif %}
+        </td>
+        <td>{{ activo(c.estado) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if puede('Gerente', 'Facturista') %}
+<section class="tarjeta">
+  <h2>Nuevo cliente</h2>
+  <form method="post" action="{{ url_for('web.registrar_cliente') }}" class="en-linea">
+    {{ csrf_campo() }}
+    <label>Nombre o razón social <input name="nombre" required maxlength="100"></label>
+    <label>Apellidos (persona física) <input name="apellido" maxlength="100"></label>
+    <label>RFC <input name="rfc" required minlength="12" maxlength="13"></label>
+    <label>Correo <input name="correo" type="email" required maxlength="100"></label>
+    <label>Teléfono <input name="telefono" maxlength="20"></label>
+    <label>Dirección (incluye «CP #####») <input name="direccion" maxlength="255"></label>
+    <button type="submit">Registrar</button>
+  </form>
+  <p class="nota">El RFC se valida en la base: 12 caracteres para personas morales y 13 para físicas (RN-01 a RN-03).</p>
+</section>
+{% endif %}
+{% endblock %}

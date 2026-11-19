@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, estado as chip with context %}
+{% block titulo %}Facturas{% endblock %}
+{% block contenido %}
+<h1>Facturas</h1>
+<p class="sub">{{ facturas | length }} factura(s){{ ' en estado ' ~ estado if estado }}.</p>
+
+<div class="rejilla">
+  <section class="tarjeta">
+    <form method="get" class="en-linea">
+      <label>Estado
+        <select name="estado">
+          <option value="">Todos</option>
+          {% for e in ['BORRADOR', 'EMITIDA', 'PAGADA', 'CANCELADA'] %}<option {{ 'selected' if e == estado }}>{{ e }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit">Filtrar</button>
+    </form>
+  </section>
+  {% if puede('Gerente', 'Facturista') %}
+  <section class="tarjeta">
+    <form method="post" action="{{ url_for('web.crear_factura') }}" class="en-linea">
+      {{ csrf_campo() }}
+      <label>Nueva factura para
+        <select name="id_cliente" required>
+          {% for c in clientes %}<option value="{{ c.id_cliente }}">{{ c.cliente }} ({{ c.rfc }})</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit">Crear borrador</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+
+<section class="tarjeta tabla-scroll">
+  <table>
+    <thead><tr><th>Folio</th><th>Cliente</th><th>Emisión</th><th>Vence</th><th class="num">Total</th><th class="num">Saldo</th><th class="num">Atraso</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for f in facturas %}
+      <tr>
+        <td><a href="{{ url_for('web.factura', id_factura=f.id_factura) }}">{{ f.folio }}</a></td>
+        <td>{{ f.cliente }}</td><td>{{ f.fecha_emision | fecha(false) }}</td><td>{{ f.fecha_vencimiento | fecha(false) }}</td>
+        <td class="num">{{ f.total | dinero }}</td><td class="num">{{ f.saldo | dinero }}</td>
+        <td class="num">{{ f.dias_atraso ~ ' d' if f.dias_atraso else '' }}</td><td>{{ chip(f.estado) }}</td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="vacio">No hay facturas</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, estado as chip, boton_post with context %}
+{% set fa = f.factura %}
+{% block titulo %}{{ fa.folio }}{% endblock %}
+{% block contenido %}
+<p><a href="{{ url_for('web.facturas') }}">← Facturas</a></p>
+<h1>{{ fa.folio }} {{ chip(fa.estado) }}</h1>
+<p class="sub">{{ fa.cliente }} · RFC {{ fa.rfc }} · elaboró {{ fa.empleado }}</p>
+
+<div class="rejilla">
+  <section class="tarjeta">
+    <h2>Importes</h2>
+    <dl class="datos">
+      <dt>Subtotal</dt><dd>{{ fa.subtotal | dinero }}</dd>
+      {% for i in f.impuestos %}
+        <dt>{{ 'IVA trasladado' if i.tipo == 'TRASLADO' else 'Retención de ' ~ i.clave }} ({{ i.tasa | pct }})</dt>
+        <dd>{{ '−' if i.tipo == 'RETENCION' }}{{ i.importe | dinero }}</dd>
+      {% endfor %}
+      <dt><strong>Total</strong></dt><dd><strong>{{ fa.total | dinero }}</strong></dd>
+      {% if fa.estado != 'BORRADOR' %}<dt>Saldo</dt><dd>{{ fa.saldo | dinero }}</dd>{% endif %}
+      <dt>Emisión</dt><dd>{{ fa.fecha_emision | fecha }}</dd>
+      <dt>Vencimiento</dt><dd>{{ fa.fecha_vencimiento | fecha }}{{ ' · ' ~ fa.dias_atraso ~ ' días de atraso' if fa.dias_atraso }}</dd>
+    </dl>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Acciones</h2>
+    {% if fa.estado == 'BORRADOR' and puede('Gerente', 'Facturista') %}
+      <form method="post" action="{{ url_for('web.emitir', id_factura=fa.id_factura) }}" class="en-linea">
+        {{ csrf_campo() }}
+        <label>Días de crédito <input name="dias_credito" type="number" min="0" max="365" value="30" required></label>
+        <button type="submit">Emitir factura</button>
+      </form>
+      <p class="acciones">{{ boton_post(url_for('web.aplicar_descuentos', id_factura=fa.id_factura), 'Aplicar descuentos de cliente o volumen', 'secundario') }}</p>
+    {% endif %}
+    {% if fa.estado == 'EMITIDA' and puede('Gerente', 'Cajero') %}
+      <form method="post" action="{{ url_for('web.registrar_pago', id_factura=fa.id_factura) }}" class="en-linea">
+        {{ csrf_campo() }}
+        <label>Método
+          <select name="id_metodo_pago">
+            {% for m in metodos %}<option value="{{ m.id_metodo_pago }}">{{ m.nombre_metodo }}{{ ' (inactivo)' if not m.estado }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Monto <input name="monto" type="number" step="0.01" min="0.01" value="{{ fa.saldo }}" required></label>
+        <label>Referencia <input name="referencia" maxlength="50"></label>
+        <button type="submit">Registrar pago</button>
+      </form>
+    {% endif %}
+    <p class="acciones">
+      {% if fa.estado in ('EMITIDA', 'PAGADA') and puede('Gerente', 'Facturista') %}
+        {{ boton_post(url_for('web.comprobante', id_factura=fa.id_factura), 'Generar estructura CFDI 4.0', 'secundario') }}
+      {% endif %}
+      {% if fa.estado == 'EMITIDA' and puede('Gerente') %}
+        {{ boton_post(url_for('web.cancelar_factura', id_factura=fa.id_factura), 'Cancelar factura', 'peligro',
+                      confirmar='¿Cancelar ' ~ fa.folio ~ '? Se generará la póliza de reversión.') }}
+      {% endif %}
+    </p>
+    {% if fa.estado in ('PAGADA', 'CANCELADA') %}<p class="nota">La factura está {{ fa.estado | lower }}; sólo admite consulta{{ ' y cancelación de pagos (Gerente)' if fa.estado == 'PAGADA' }}.</p>{% endif %}
+  </section>
+</div>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Conceptos</h2>
+  <table>
+    <thead><tr><th>Código</th><th>Servicio</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Descuento</th><th class="num">Subtotal</th><th></th></tr></thead>
+    <tbody>
+    {% for d in f.detalle %}
+      <tr><td>{{ d.codigo_servicio }}</td><td>{{ d.nombre_servicio }}</td><td class="num">{{ d.cantidad }}</td>
+          <td class="num">{{ d.precio_unitario | dinero }}</td><td class="num">{{ d.descuento | dinero }}</td><td class="num">{{ d.subtotal | dinero }}</td>
+          <td>{% if fa.estado == 'BORRADOR' and puede('Gerente', 'Facturista') %}
+                {{ boton_post(url_for('web.eliminar_concepto', id_detalle=d.id_detalle), 'Quitar', 'mini secundario', volver=request.path) }}
+              {% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="vacio">Sin conceptos todavía</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% if fa.estado == 'BORRADOR' and puede('Gerente', 'Facturista') %}
+    <h3>Agregar concepto</h3>
+    <form method="post" action="{{ url_for('web.agregar_concepto', id_factura=fa.id_factura) }}" class="en-linea">
+      {{ csrf_campo() }}
+      <label>Servicio
+        <select name="id_servicio" required>
+          {% for s in servicios %}<option value="{{ s.id_servicio }}">{{ s.codigo_servicio }} · {{ s.nombre_servicio }} · {{ s.precio_base | dinero }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Cantidad <input name="cantidad" type="number" min="1" value="1" required></label>
+      <label>Descuento % <input name="descuento_pct" type="number" min="0" max="100" step="0.01" value="0"></label>
+      <button type="submit">Agregar</button>
+    </form>
+    <p class="nota">Se aplica el mayor entre el descuento capturado (máximo 50 %), el convenio del cliente y el de volumen (3 % desde 10, 5 % desde 24, 8 % desde 50 unidades).</p>
+  {% endif %}
+</section>
+
+<div class="rejilla">
+  <section class="tarjeta tabla-scroll">
+    <h2>Pagos</h2>
+    <table>
+      <thead><tr><th>Fecha</th><th>Método</th><th>Referencia</th><th class="num">Monto</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for p in f.pagos %}
+        <tr><td>{{ p.fecha_pago | fecha }}</td><td>{{ p.metodo }}</td><td>{{ p.referencia or '' }}</td>
+            <td class="num">{{ p.monto | dinero }}</td><td>{{ chip(p.estado) }}</td>
+            <td>{% if p.estado == 'APLICADO' and puede('Gerente') %}
+                  {{ boton_post(url_for('web.cancelar_pago', id_pago=p.id_pago), 'Cancelar', 'mini peligro',
+                                confirmar='¿Cancelar este pago? La factura vuelve a EMITIDA.', volver=request.path) }}
+                {% endif %}</td></tr>
+      {% else %}<tr><td colspan="6" class="vacio">Sin pagos</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="tarjeta tabla-scroll">
+    <h2>Pólizas contables</h2>
+    <table>
+      <thead><tr><th>Evento</th><th>Cuenta</th><th class="num">Cargo</th><th class="num">Abono</th></tr></thead>
+      <tbody>
+      {% for m in f.polizas %}
+        <tr><td>{{ m.evento | replace('_', ' ') | lower }}</td><td>{{ m.cuenta }}</td>
+            <td class="num">{{ m.cargo | dinero if m.cargo > 0 }}</td><td class="num">{{ m.abono | dinero if m.abono > 0 }}</td></tr>
+      {% else %}<tr><td colspan="4" class="vacio">Se generan al emitir</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+{% if f.comprobante %}
+<section class="tarjeta">
+  <h2>Comprobante CFDI {{ f.comprobante.version_cfdi }} {{ chip(f.comprobante.estado) }}</h2>
+  <p class="nota">Generado el {{ f.comprobante.fecha_generacion | fecha }}. Estructura lista para enviarse a un PAC (el timbrado queda fuera de alcance).</p>
+  <pre class="json">{{ f.comprobante.contenido | tojson(indent=2) }}</pre>
+</section>
+{% endif %}
+{% endblock %}

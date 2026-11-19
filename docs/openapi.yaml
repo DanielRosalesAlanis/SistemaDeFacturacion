@@ -1,0 +1,406 @@
+openapi: 3.0.3
+info:
+  title: Sistema de Facturación y Servicios — API REST
+  version: 1.0.0
+  description: |
+    API del Equipo 3 (Optativa I · Proyecto C). Escribe sólo mediante procedimientos
+    almacenados (`CALL facturacion.sp_*`) y lee de vistas (`facturacion.vw_*`).
+
+    **Autenticación:** `POST /api/auth/login` devuelve un JWT (HS256, 60 min). Envíalo en
+    `Authorization: Bearer <token>`. El empleado que se registra en cada operación sale del
+    token, nunca del cuerpo de la petición.
+
+    **Importes:** se envían y se devuelven como texto decimal exacto (`"11149.92"`).
+    **Fechas:** ISO 8601, guardadas en UTC.
+
+    **Errores:** `{"error": "mensaje"}`. 422 indica que una regla de negocio rechazó la
+    operación; el mensaje empieza con su código (`RN-14: ...`).
+servers:
+  - url: http://127.0.0.1:5000
+    description: Local (flask --app src/wsgi.py run)
+security:
+  - jwt: []
+tags:
+  - name: Sesión
+  - name: Catálogo
+  - name: Clientes
+  - name: Facturas
+  - name: Pagos
+  - name: Reportes
+  - name: Administración
+
+paths:
+  /api/salud:
+    get:
+      tags: [Sesión]
+      summary: Estado de la API y de la conexión a RDS
+      security: []
+      responses:
+        '200': {description: OK, content: {application/json: {example: {estado: ok, base_de_datos: conectada}}}}
+  /api/auth/login:
+    post:
+      tags: [Sesión]
+      summary: Inicia sesión y obtiene un JWT
+      description: 5 intentos fallidos seguidos bloquean la cuenta 15 minutos (RN-33).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Login'}
+            example: {usuario: ana.torres, contrasena: Demo2026!}
+      responses:
+        '200':
+          description: Token emitido
+          content:
+            application/json:
+              example: {token: eyJhbGciOi..., tipo: Bearer, expira: '2026-11-20T00:45:08+00:00',
+                        usuario: {id_usuario: 2, id_empleado: 2, rol: Facturista, nombre: Ana Torres Vega, usuario: ana.torres}}
+        '400': {$ref: '#/components/responses/Invalido'}
+        '401': {description: Usuario o contraseña incorrectos}
+        '403': {description: Cuenta desactivada}
+        '423': {description: Cuenta bloqueada por intentos fallidos}
+  /api/auth/yo:
+    get:
+      tags: [Sesión]
+      summary: Datos del usuario del token
+      responses:
+        '200': {description: OK}
+        '401': {$ref: '#/components/responses/SinToken'}
+
+  /api/servicios:
+    get:
+      tags: [Catálogo]
+      summary: Catálogo de servicios (vw_catalogo_servicios)
+      parameters:
+        - {name: q, in: query, schema: {type: string}, description: Busca en código o nombre}
+        - {name: categoria, in: query, schema: {type: string}}
+        - {name: activos, in: query, schema: {type: string, enum: ['1']}}
+      responses:
+        '200': {description: Lista de servicios}
+    post:
+      tags: [Catálogo]
+      summary: Alta de servicio (SP02) · Gerente
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ServicioNuevo'}}}}
+      responses:
+        '201': {description: Creado, content: {application/json: {example: {id_servicio: 101}}}}
+        '400': {$ref: '#/components/responses/Invalido'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/servicios/{codigo}/ficha:
+    get:
+      tags: [Catálogo]
+      summary: Ficha técnica, características y cambios de tarifa
+      parameters: [{name: codigo, in: path, required: true, schema: {type: string}, example: SRV-013}]
+      responses:
+        '200': {description: OK}
+        '404': {$ref: '#/components/responses/NoExiste'}
+  /api/servicios/{id_servicio}/caracteristicas/{id_caracteristica}:
+    put:
+      tags: [Catálogo]
+      summary: Asigna o cambia el valor de una característica (SP03, RN-06) · Gerente
+      parameters:
+        - {$ref: '#/components/parameters/IdServicio'}
+        - {name: id_caracteristica, in: path, required: true, schema: {type: integer}}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [valor], properties: {valor: {type: string, maxLength: 100}}}}}}
+      responses:
+        '200': {description: OK}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/servicios/caracteristicas/masivo:
+    post:
+      tags: [Catálogo]
+      summary: Asignación masiva de características, todo o nada (SP19, RN-31) · Gerente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asignaciones]
+              properties:
+                asignaciones: {type: array, minItems: 1, maxItems: 500, items: {type: object}}
+            example:
+              asignaciones:
+                - {id_categoria: 2, id_caracteristica: 18, valor: '99.95'}
+                - {codigo_servicio: SRV-001, id_caracteristica: 3, valor: '25'}
+      responses:
+        '200': {description: OK, content: {application/json: {example: {servicios_afectados: 11}}}}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/servicios/{id_servicio}/precio:
+    patch:
+      tags: [Catálogo]
+      summary: Cambia el precio; queda en auditoría (SP04, RN-07, RN-08, RN-25) · Gerente o Facturista
+      parameters: [{$ref: '#/components/parameters/IdServicio'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [precio], properties: {precio: {$ref: '#/components/schemas/Dinero'}}}}}}
+      responses:
+        '200': {description: OK}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/servicios/{id_servicio}/estado:
+    patch:
+      tags: [Catálogo]
+      summary: Activa o desactiva un servicio (SP05, RN-09) · Gerente
+      parameters: [{$ref: '#/components/parameters/IdServicio'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [activo], properties: {activo: {type: boolean}}}}}}
+      responses:
+        '200': {description: OK}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/categorias:
+    get: {tags: [Catálogo], summary: Categorías, responses: {'200': {description: OK}}}
+  /api/caracteristicas:
+    get: {tags: [Catálogo], summary: Diccionario de 50 características, responses: {'200': {description: OK}}}
+
+  /api/clientes:
+    get:
+      tags: [Clientes]
+      summary: Clientes con sus condiciones (vw_clientes)
+      responses: {'200': {description: OK}}
+    post:
+      tags: [Clientes]
+      summary: Alta de cliente (SP01, RN-01 a RN-03) · Gerente o Facturista
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ClienteNuevo'}}}}
+      responses:
+        '201': {description: Creado, content: {application/json: {example: {id_cliente: 21}}}}
+        '400': {$ref: '#/components/responses/Invalido'}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/metodos-pago:
+    get: {tags: [Pagos], summary: Métodos de pago, responses: {'200': {description: OK}}}
+
+  /api/facturas:
+    get:
+      tags: [Facturas]
+      summary: Facturas con saldo y atraso (vw_facturas)
+      parameters: [{name: estado, in: query, schema: {type: string, enum: [BORRADOR, EMITIDA, PAGADA, CANCELADA]}}]
+      responses: {'200': {description: OK}}
+    post:
+      tags: [Facturas]
+      summary: Crea un borrador con folio atómico (SP06, RN-10, RN-11) · Gerente o Facturista
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [id_cliente], properties: {id_cliente: {type: integer}}}, example: {id_cliente: 1}}}}
+      responses:
+        '201': {description: Creada, content: {application/json: {example: {id_factura: 7}}}}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/{id_factura}:
+    get:
+      tags: [Facturas]
+      summary: Encabezado, conceptos, impuestos, pagos, pólizas y comprobante
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      responses:
+        '200': {description: OK}
+        '404': {$ref: '#/components/responses/NoExiste'}
+  /api/facturas/{id_factura}/detalle:
+    post:
+      tags: [Facturas]
+      summary: Agrega un concepto con descuento automático (SP08, RN-12 a RN-14, RN-26) · Gerente o Facturista
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Concepto'}, example: {id_servicio: 13, cantidad: 12, descuento_pct: 10}}}}
+      responses:
+        '201': {description: Agregado, content: {application/json: {example: {id_detalle: 21}}}}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/detalle/{id_detalle}:
+    delete:
+      tags: [Facturas]
+      summary: Quita un concepto de un borrador (SP09) · Gerente o Facturista
+      parameters: [{name: id_detalle, in: path, required: true, schema: {type: integer}}]
+      responses:
+        '200': {description: OK}
+        '404': {$ref: '#/components/responses/NoExiste'}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/{id_factura}/descuentos:
+    post:
+      tags: [Facturas]
+      summary: Reaplica descuentos de cliente o volumen a un borrador (SP15) · Gerente o Facturista
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      responses: {'200': {description: OK, content: {application/json: {example: {renglones_actualizados: 1}}}}}
+  /api/facturas/{id_factura}/emitir:
+    post:
+      tags: [Facturas]
+      summary: Emite la factura y genera su póliza (SP10, RN-16 a RN-18, RN-28) · Gerente o Facturista
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      requestBody: {content: {application/json: {schema: {type: object, properties: {dias_credito: {type: integer, minimum: 0, maximum: 365, default: 30}}}}}}
+      responses:
+        '200': {description: Factura emitida (fila de vw_facturas)}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/{id_factura}/cancelar:
+    post:
+      tags: [Facturas]
+      summary: Cancela y revierte la póliza (SP13, RN-24, RN-28) · Gerente
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      responses:
+        '200': {description: OK}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/{id_factura}/pagos:
+    post:
+      tags: [Pagos]
+      summary: Registra un abono (SP11, RN-19 a RN-22) · Gerente o Cajero
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Pago'}, example: {id_metodo_pago: 2, monto: '5000.00', referencia: SPEI-1}}}}
+      responses:
+        '201': {description: Registrado, content: {application/json: {example: {id_pago: 5}}}}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/pagos/{id_pago}/cancelar:
+    post:
+      tags: [Pagos]
+      summary: Cancela un pago y revierte su póliza (SP12, RN-23) · Gerente
+      parameters: [{name: id_pago, in: path, required: true, schema: {type: integer}}]
+      responses:
+        '200': {description: OK}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/facturas/{id_factura}/comprobante:
+    post:
+      tags: [Facturas]
+      summary: Genera la estructura CFDI 4.0 (SP18, RN-30) · Gerente o Facturista
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      responses:
+        '201': {description: JSON del comprobante}
+        '422': {$ref: '#/components/responses/Regla'}
+    get:
+      tags: [Facturas]
+      summary: Comprobante generado (vw_comprobantes)
+      parameters: [{$ref: '#/components/parameters/IdFactura'}]
+      responses:
+        '200': {description: OK}
+        '404': {$ref: '#/components/responses/NoExiste'}
+
+  /api/reportes/{nombre}:
+    get:
+      tags: [Reportes]
+      summary: Reportes de solo lectura
+      parameters:
+        - name: nombre
+          in: path
+          required: true
+          schema: {type: string, enum: [ventas-categoria, cobranza, balanza, auditoria-tarifas, impuestos, cierres]}
+      responses:
+        '200': {description: OK}
+        '404': {$ref: '#/components/responses/NoExiste'}
+  /api/reportes/antiguedad:
+    get:
+      tags: [Reportes]
+      summary: Antigüedad de saldos por rangos (fn_antiguedad_saldos)
+      parameters: [{name: fecha_corte, in: query, schema: {type: string, format: date}}]
+      responses: {'200': {description: OK}}
+  /api/reportes/polizas:
+    get:
+      tags: [Reportes]
+      summary: Pólizas contables (vw_polizas)
+      parameters: [{name: folio, in: query, schema: {type: string}, example: F-000003}]
+      responses: {'200': {description: OK}}
+  /api/cierres:
+    post:
+      tags: [Reportes]
+      summary: Cierre fiscal diario o mensual (SP17, RN-29) · Gerente
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [tipo, fecha], properties: {tipo: {type: string, enum: [DIARIO, MENSUAL]}, fecha: {type: string, format: date}}}}}}
+      responses:
+        '201': {description: Creado, content: {application/json: {example: {id_cierre: 1}}}}
+        '422': {$ref: '#/components/responses/Regla'}
+
+  /api/impuestos:
+    post:
+      tags: [Administración]
+      summary: Registra una tasa con vigencia; cierra la anterior (SP14, RN-27) · Gerente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clave, tipo, tasa, vigente_desde]
+              properties:
+                clave: {type: string, enum: [IVA, ISR]}
+                tipo: {type: string, enum: [TRASLADO, RETENCION]}
+                tasa: {type: string, example: '0.160000'}
+                vigente_desde: {type: string, format: date}
+      responses:
+        '201': {description: Creada}
+        '422': {$ref: '#/components/responses/Regla'}
+  /api/usuarios:
+    get:
+      tags: [Administración]
+      summary: Usuarios y roles, sin hash (vw_usuarios) · Gerente
+      responses: {'200': {description: OK}}
+    post:
+      tags: [Administración]
+      summary: Alta de usuario; la API cifra la contraseña con bcrypt (SP20, RN-32) · Gerente
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UsuarioNuevo'}}}}
+      responses:
+        '201': {description: Creado}
+        '400': {$ref: '#/components/responses/Invalido'}
+        '422': {$ref: '#/components/responses/Regla'}
+
+components:
+  securitySchemes:
+    jwt: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    IdFactura: {name: id_factura, in: path, required: true, schema: {type: integer}, example: 2}
+    IdServicio: {name: id_servicio, in: path, required: true, schema: {type: integer}, example: 13}
+  schemas:
+    Dinero: {type: string, pattern: '^\d{1,10}(\.\d{1,2})?$', example: '11149.92'}
+    Login:
+      type: object
+      required: [usuario, contrasena]
+      properties:
+        usuario: {type: string, minLength: 3, maxLength: 50}
+        contrasena: {type: string, maxLength: 128, format: password}
+    ServicioNuevo:
+      type: object
+      required: [id_categoria, codigo, nombre, precio, unidad]
+      additionalProperties: false
+      properties:
+        id_categoria: {type: integer}
+        codigo: {type: string, maxLength: 20, example: SRV-101}
+        nombre: {type: string, maxLength: 150}
+        descripcion: {type: string, maxLength: 255}
+        precio: {$ref: '#/components/schemas/Dinero'}
+        unidad: {type: string, enum: [Servicio, Hora, Mes, Año, Evento]}
+    ClienteNuevo:
+      type: object
+      required: [nombre, rfc, correo]
+      additionalProperties: false
+      properties:
+        nombre: {type: string, maxLength: 100}
+        apellido: {type: string, maxLength: 100, description: Obligatorio para personas físicas (RFC de 13)}
+        rfc: {type: string, minLength: 12, maxLength: 13, example: ABC010101AB1}
+        correo: {type: string, format: email}
+        telefono: {type: string, maxLength: 20}
+        direccion: {type: string, maxLength: 255, description: 'Debe incluir «CP #####» para generar el CFDI'}
+    Concepto:
+      type: object
+      required: [id_servicio, cantidad]
+      additionalProperties: false
+      properties:
+        id_servicio: {type: integer}
+        cantidad: {type: integer, minimum: 1}
+        descuento_pct: {type: string, example: '10', description: '0 a 50 (RN-14); se aplica el mayor entre éste, el del cliente y el de volumen'}
+    Pago:
+      type: object
+      required: [id_metodo_pago, monto]
+      additionalProperties: false
+      properties:
+        id_metodo_pago: {type: integer}
+        monto: {$ref: '#/components/schemas/Dinero'}
+        referencia: {type: string, maxLength: 50}
+    UsuarioNuevo:
+      type: object
+      required: [id_empleado, nombre_usuario, contrasena, rol]
+      additionalProperties: false
+      properties:
+        id_empleado: {type: integer}
+        nombre_usuario: {type: string, pattern: '^[A-Za-z0-9._-]{3,50}$'}
+        contrasena: {type: string, minLength: 10, format: password, description: Letras y números}
+        rol: {type: string, enum: [Gerente, Facturista, Cajero, Auxiliar]}
+    Error:
+      type: object
+      properties:
+        error: {type: string}
+        detalle: {type: array, items: {type: string}}
+  responses:
+    Invalido: {description: Datos con formato inválido, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    SinToken: {description: Falta el token o es inválido o expiró, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    Prohibido: {description: El rol del token no tiene permiso, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    NoExiste: {description: No existe, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    Regla:
+      description: Regla de negocio incumplida (RN-xx)
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: 'RN-14: El descuento debe estar entre 0 y 50 %'}

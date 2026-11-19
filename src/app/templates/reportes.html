@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo with context %}
+{% block titulo %}Reportes{% endblock %}
+{% block contenido %}
+<h1>Reportes</h1>
+<p class="sub">Antigüedad de saldos, ventas, cobranza, contabilidad, cierres y tarifas.</p>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Antigüedad de saldos{{ ' al ' ~ (fecha_corte | fecha(false)) if fecha_corte else ' a hoy' }}</h2>
+  <form method="get" class="en-linea">
+    <label>Fecha de corte <input name="fecha_corte" type="date" value="{{ fecha_corte or '' }}"></label>
+    <button type="submit" class="secundario">Calcular</button>
+  </form>
+  <table>
+    <thead><tr><th>Cliente</th><th>RFC</th><th class="num">Facturas</th><th class="num">Por vencer</th><th class="num">1–30</th><th class="num">31–60</th><th class="num">61–90</th><th class="num">+90</th><th class="num">Total</th></tr></thead>
+    <tbody>
+    {% for a in antiguedad %}
+      <tr><td>{{ a.cliente }}</td><td>{{ a.rfc }}</td><td class="num">{{ a.facturas }}</td>
+          <td class="num">{{ a.por_vencer | dinero }}</td><td class="num">{{ a.dias_1_30 | dinero }}</td><td class="num">{{ a.dias_31_60 | dinero }}</td>
+          <td class="num">{{ a.dias_61_90 | dinero }}</td><td class="num">{{ a.mas_de_90 | dinero }}</td><td class="num">{{ a.saldo_total | dinero }}</td></tr>
+    {% else %}<tr><td colspan="9" class="vacio">Sin saldos pendientes</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<div class="rejilla">
+  <section class="tarjeta">
+    <h2>Ventas por categoría</h2>
+    <table>
+      <thead><tr><th>Categoría</th><th class="num">Facturas</th><th class="num">Venta neta</th></tr></thead>
+      <tbody>{% for v in ventas %}<tr><td>{{ v.nombre_categoria }}</td><td class="num">{{ v.facturas }}</td><td class="num">{{ v.venta_neta | dinero }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+  <section class="tarjeta">
+    <h2>Cobranza por método</h2>
+    <table>
+      <thead><tr><th>Método</th><th class="num">Pagos</th><th class="num">Cobrado</th></tr></thead>
+      <tbody>{% for c in cobranza %}<tr><td>{{ c.nombre_metodo }}</td><td class="num">{{ c.pagos }}</td><td class="num">{{ c.cobrado | dinero }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+  <section class="tarjeta">
+    <h2>Balanza de comprobación</h2>
+    <table>
+      <thead><tr><th>Cuenta</th><th class="num">Cargos</th><th class="num">Abonos</th><th class="num">Saldo</th></tr></thead>
+      <tbody>
+      {% for b in balanza %}<tr><td>{{ b.cuenta }}</td><td class="num">{{ b.cargos | dinero }}</td><td class="num">{{ b.abonos | dinero }}</td><td class="num">{{ b.saldo | dinero }}</td></tr>{% endfor %}
+      <tr class="total"><td>Suma</td><td class="num">{{ balanza | sum(attribute='cargos') | dinero }}</td>
+          <td class="num">{{ balanza | sum(attribute='abonos') | dinero }}</td><td class="num">{{ balanza | sum(attribute='saldo') | dinero }}</td></tr>
+      </tbody>
+    </table>
+    <p class="nota">La suma de saldos siempre es $0.00: cada póliza está balanceada (RN-28).</p>
+  </section>
+</div>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Cierres fiscales</h2>
+  {% if puede('Gerente') %}
+  <form method="post" action="{{ url_for('web.cierre') }}" class="en-linea">
+    {{ csrf_campo() }}
+    <label>Tipo <select name="tipo"><option>DIARIO</option><option>MENSUAL</option></select></label>
+    <label>Fecha del periodo <input name="fecha" type="date" value="{{ hoy }}" required></label>
+    <button type="submit" data-confirmar="El cierre guarda las cifras del periodo y no se puede repetir. ¿Continuar?">Cerrar periodo</button>
+  </form>
+  {% endif %}
+  <table>
+    <thead><tr><th>Tipo</th><th>Periodo</th><th class="num">Emitidas</th><th class="num">Canceladas</th><th class="num">Subtotal</th><th class="num">IVA</th><th class="num">Retenciones</th><th class="num">Facturado</th><th class="num">Cobrado</th><th>Cerró</th></tr></thead>
+    <tbody>
+    {% for c in cierres %}
+      <tr><td>{{ c.tipo }}</td><td>{{ c.periodo_inicio | fecha(false) }}{{ ' – ' ~ (c.periodo_fin | fecha(false)) if c.periodo_fin != c.periodo_inicio }}</td>
+          <td class="num">{{ c.facturas_emitidas }}</td><td class="num">{{ c.facturas_canceladas }}</td><td class="num">{{ c.subtotal | dinero }}</td>
+          <td class="num">{{ c.iva_trasladado | dinero }}</td><td class="num">{{ c.retenciones | dinero }}</td><td class="num">{{ c.total_facturado | dinero }}</td>
+          <td class="num">{{ c.total_cobrado | dinero }}</td><td>{{ c.empleado }}</td></tr>
+    {% else %}<tr><td colspan="10" class="vacio">Sin periodos cerrados</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Auditoría de tarifas</h2>
+  <table>
+    <thead><tr><th>Fecha</th><th>Servicio</th><th class="num">Anterior</th><th class="num">Nuevo</th><th class="num">Variación</th><th>Quién</th></tr></thead>
+    <tbody>
+    {% for a in tarifas %}
+      <tr><td>{{ a.fecha_cambio | fecha }}</td><td><a href="{{ url_for('web.ficha', codigo=a.codigo_servicio) }}">{{ a.codigo_servicio }}</a> {{ a.nombre_servicio }}</td>
+          <td class="num">{{ a.precio_anterior | dinero }}</td><td class="num">{{ a.precio_nuevo | dinero }}</td><td class="num">{{ a.variacion_pct }} %</td><td>{{ a.empleado }}</td></tr>
+    {% else %}<tr><td colspan="6" class="vacio">Sin cambios de tarifa</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

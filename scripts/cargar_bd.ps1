@@ -55,7 +55,8 @@ if (-not $SoloPruebas) {
             throw "El esquema facturacion ya existe y 01_esquema.sql lo BORRA. Vuelve a ejecutar con -Forzar (y -Respaldo si hay datos que conservar)."
         }
         if ($Respaldo) {
-            $archivo = "facturacion_" + (Get-Date -Format "yyyyMMdd_HHmm") + ".dump"
+            New-Item -ItemType Directory -Force respaldos | Out-Null
+            $archivo = "respaldos/facturacion_" + (Get-Date -Format "yyyyMMdd_HHmm") + ".dump"
             & $pgdump -n facturacion -Fc -f $archivo
             if ($LASTEXITCODE -ne 0) { throw "Falló el respaldo" }
             Write-Host "Respaldo: $archivo"
@@ -64,7 +65,7 @@ if (-not $SoloPruebas) {
     foreach ($f in "01_esquema.sql", "02_procedimientos.sql", "03_datos.sql") {
         Write-Host "Cargando database/$f ..."
         cmd /c "`"$psql`" -X -q -v ON_ERROR_STOP=1 -f database/$f 2>&1" |
-            Where-Object { $_ -notmatch 'NOTICE|DETAIL|^drop cascades' }
+            Where-Object { $_ -notmatch 'NOTICE|AVISO|DETAIL|DETALLE|^drop cascades' }
         if ($LASTEXITCODE -ne 0) { throw "Falló database/$f (código $LASTEXITCODE)" }
     }
 }

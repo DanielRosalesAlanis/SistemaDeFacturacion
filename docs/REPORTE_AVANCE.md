@@ -24,19 +24,28 @@ Los diagramas usan **Mermaid**, que GitHub dibuja automáticamente al abrir el a
 
 ## 1. Resumen del avance
 
-La base de datos relacional está desplegada en Amazon RDS y probada (**63 de 63 pruebas**). Cumple el volumen que pide la rúbrica (100 servicios y 50 características), tiene las 8 tablas que nombra el Proyecto C (20 en total) y **cubre los 10 propósitos de procedimientos** con 21 SP. Faltan DynamoDB y la capa de aplicación: API con autenticación JWT en API Gateway y Lambda, y el frontend conectado. Si se entregara hoy, la estimación interna es de **54 a 72 puntos de 100** (sección 2.3).
+La base de datos relacional está desplegada en Amazon RDS y probada (**63 de 63 pruebas**). Cumple el volumen que pide la rúbrica (100 servicios y 50 características), tiene las 8 tablas que nombra el Proyecto C (20 en total) y **cubre los 10 propósitos de procedimientos** con 21 SP.
+
+La **aplicación en Flask (Python)** está conectada a RDS y probada (**25 de 25 pruebas**). Incluye:
+- Frontend con plantillas Jinja.
+- API REST de 29 endpoints con JWT, documentada en OpenAPI.
+- Control de acceso por rol en cada endpoint y protección contra inyección SQL, XSS y CSRF.
+
+Falta desplegarla en AWS (API Gateway y Lambda) y crear la tabla de DynamoDB, cuyo esquema ya está definido. Si se entregara hoy, la estimación interna es de **72 a 87 puntos de 100** (sección 2.3).
 
 | Área | Estado | Evidencia principal |
 | --- | --- | --- |
 | Modelo de datos | Completado | 20 tablas: las 10 del diagrama ER del equipo + 10 de extensión (sección 4) |
-| Base de datos y reglas de negocio | Completado | `database/`: 21 SP, 11 funciones, 11 vistas, 1 trigger, reglas RN-01 a RN-33 |
+| Base de datos y reglas de negocio | Completado | `database/`: 21 SP, 11 funciones, 21 vistas, 1 trigger, reglas RN-01 a RN-33 |
 | Despliegue en la nube | Completado | Instancia `db-billing-postgres` en Amazon RDS, PostgreSQL 18.3 |
-| Despliegue automatizado | Completado | `scripts/cargar_bd.ps1` y `scripts/cargar_bd.sh` leen la conexión de `.env` |
-| Pruebas | Completado | `database/resultado_pruebas.txt`: 63 OK, 0 fallas |
+| Despliegue automatizado de la base | Completado | `scripts/cargar_bd.ps1` y `scripts/cargar_bd.sh` leen la conexión de `.env` |
+| Pruebas | Completado | Base: `database/resultado_pruebas.txt` (63 OK). Aplicación: `tests/` (25 OK) |
+| Aplicación Flask (frontend + API) | Completado en local | `src/app/`; probada contra RDS |
+| Seguridad | Completado en la aplicación | JWT, bcrypt, RBAC, CSRF, CSP y consultas parametrizadas |
+| Documentación de la API | Completado | `docs/openapi.yaml` (validado; coincide con las 29 rutas) |
+| DynamoDB | Diseñado | `database/dynamodb/eventos_auditoria.json`; la app ya escribe los eventos cuando existe la tabla |
+| API Gateway + Lambda | Preparado | `src/lambda_handler.py`; falta crear los recursos en AWS |
 | Control de versiones | En progreso | Repositorio Git local con historial por etapa; falta subirlo a GitHub |
-| Interfaz | Prototipo | Demo navegable con las reglas originales, sin conexión a la base |
-| API y aplicación conectada | Pendiente | Diseñada; sin construir |
-| DynamoDB, JWT, API Gateway/Lambda | Pendiente | Requeridos por la rúbrica |
 
 ---
 
@@ -54,7 +63,7 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* 
 | Clientes, Facturas, Detalle_Factura, Servicios, Características_Servicio, Pagos | ✅ Cumplido | `clientes`, `facturas`, `detalle_factura`, `servicios`, `caracteristicas` + `servicio_caracteristicas`, `pagos` |
 | Impuestos_Histórico | ✅ Cumplido | `impuestos_historico` (IVA 15 % → 16 %, retenciones de ISR e IVA, con vigencia) y `factura_impuestos` |
 | Usuarios_Roles | ✅ Cumplido | `usuarios` (hash bcrypt, bloqueo por intentos) y `roles`; los permisos de los SP salen del rol |
-| DynamoDB (auditoría, sesiones, carritos o eventos) | ❌ Falta | Ninguna tabla de DynamoDB todavía |
+| DynamoDB (auditoría, sesiones, carritos o eventos) | ⚠️ Diseñado | Tabla de eventos inmutables On-Demand con 2 GSI (`database/dynamodb/`); la app ya la usa; falta crearla en AWS |
 | Mínimo 10 SP en RDS | ✅ Cumplido (21) | Los 10 propósitos cubiertos (ver 2.2) |
 
 ### 2.2 Los 10 procedimientos que pide la rúbrica
@@ -78,12 +87,12 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* 
 
 | Rubro | Peso | Nivel actual | Puntos estimados | Qué lo sube a Excelente |
 | --- | --- | --- | --- | --- |
-| 1. Diseño, modelado y rigor en BD | 30 | Suficiente a excelente | 24–28 | Esquema de DynamoDB con sus índices; ER actualizado en draw.io |
-| 2. Arquitectura en AWS y Learner Lab | 25 | Insuficiente a suficiente | 10–14 | API Gateway + Lambda con LabRole, DynamoDB, apagar RDS fuera de horario |
-| 3. Lógica de negocio y SP | 20 | Suficiente | 14–16 | Llamar los SP desde la aplicación (hoy sólo desde psql y pruebas) |
-| 4. Ciberseguridad, RBAC y OWASP | 15 | Insuficiente a suficiente | 4–8 | JWT en la API, roles en cada endpoint, pruebas contra inyección SQL y XSS |
-| 5. Frontend, documentación y Git | 10 | Insuficiente a suficiente | 2–6 | Frontend conectado, GitHub con commits de los 4 integrantes, OpenAPI |
-| **Total** | **100** | | **54–72** | |
+| 1. Diseño, modelado y rigor en BD | 30 | Excelente | 26–29 | Crear la tabla de DynamoDB; ER actualizado en draw.io |
+| 2. Arquitectura en AWS y Learner Lab | 25 | Suficiente | 14–18 | Desplegar en API Gateway + Lambda con LabRole, crear DynamoDB, apagar RDS fuera de horario |
+| 3. Lógica de negocio y SP | 20 | Excelente | 17–19 | Los 21 SP ya se llaman desde la aplicación; folios y cobros con bloqueos |
+| 4. Ciberseguridad, RBAC y OWASP | 15 | Excelente | 12–14 | Probar los mismos ataques contra la versión desplegada (https) |
+| 5. Frontend, documentación y Git | 10 | Suficiente | 3–7 | GitHub con commits de los 4 integrantes |
+| **Total** | **100** | | **72–87** | |
 
 ### 2.4 Checklist de entregables del repositorio
 
@@ -91,12 +100,12 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* 
 | --- | --- |
 | `/database`: DDL y DML | ✅ `database/01_esquema.sql` y `database/03_datos.sql` |
 | `/database`: script independiente de Stored Procedures | ✅ `database/02_procedimientos.sql` |
-| `/database`: esquema JSON de DynamoDB e índices | ❌ Falta |
+| `/database`: esquema JSON de DynamoDB e índices | ✅ `database/dynamodb/eventos_auditoria.json` (On-Demand, 2 GSI) |
 | `/docs`: diagrama ER actualizado | ✅ Sección 4 de este archivo (20 tablas) |
 | `/docs`: diagrama de arquitectura AWS | ✅ Actual y objetivo en la sección 3 |
-| `/docs`: colección de Postman u OpenAPI | ❌ Falta (se genera con la API) |
-| Código Python (FastAPI o Lambda) y frontend | ❌ Falta (sólo prototipo en `frontend/`) |
-| `README.md` con instrucciones de ejecución y conexión a AWS | ✅ Configuración, despliegue, pruebas y pgAdmin |
+| `/docs`: colección de Postman u OpenAPI | ✅ `docs/openapi.yaml` (se importa en Postman) |
+| Código Python (Flask) y frontend | ✅ `src/app/`: frontend Jinja + API REST; `tests/` con 25 pruebas |
+| `README.md` con instrucciones de ejecución y conexión a AWS | ✅ Configuración, base, app, pruebas, seguridad y despliegue |
 | Repositorio en GitHub | ❌ Falta (sólo repositorio local) |
 
 ---
@@ -108,24 +117,26 @@ Fuente: *Lineamientos Técnicos y Rúbrica de Evaluación de Proyectos Finales* 
 ```mermaid
 flowchart LR
     subgraph Local["Equipo de desarrollo"]
-        GIT["Repositorio Git<br/>database/ · scripts/ · docs/"]
+        GIT["Repositorio Git<br/>database/ · src/ · tests/ · docs/"]
         DEP["scripts/cargar_bd<br/>despliegue + 63 pruebas"]
         CLI["pgAdmin / psql<br/>consultas y demo"]
-        API["API REST (FastAPI)<br/>PENDIENTE"]:::pend
-        UI["Interfaz web<br/>prototipo sin conexión"]
+        NAV["Navegador"]
+        APP["Aplicación Flask<br/>frontend Jinja + API REST /api<br/>JWT · RBAC · CSRF · CSP"]
     end
     subgraph AWS["AWS · us-east-1 (AWS Academy Learner Lab)"]
         subgraph VPC["VPC vpc-08c8747b2dfc49016"]
             subgraph SG["Security group secg-db-laboratory<br/>5432 sólo desde la IP del equipo"]
-                RDS[("Amazon RDS · db-billing-postgres<br/>PostgreSQL 18.3 · db.t3.micro · 20 GiB gp2<br/>base billing · esquema facturacion<br/>20 tablas · 21 SP · 11 funciones · 11 vistas")]
+                RDS[("Amazon RDS · db-billing-postgres<br/>PostgreSQL 18.3 · db.t3.micro · 20 GiB gp2<br/>base billing · esquema facturacion<br/>20 tablas · 21 SP · 11 funciones · 21 vistas")]
             end
         end
+        DDB[("DynamoDB facturacion-eventos<br/>DISEÑADA, sin crear")]:::pend
     end
     GIT --> DEP
     DEP -->|SSL verify-full · 5432| RDS
     CLI -->|SSL verify-full · 5432| RDS
-    UI -.->|se conectará| API
-    API -.-> RDS
+    NAV -->|cookie JWT HttpOnly| APP
+    APP -->|CALL sp_* / SELECT vw_*<br/>SSL verify-full| RDS
+    APP -.->|PutItem eventos| DDB
     classDef pend stroke-dasharray: 5 5
 ```
 
@@ -133,9 +144,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U["Usuario<br/>(navegador)"] --> FE["Frontend web<br/>(4 pantallas)"]
-    FE -->|HTTPS + JWT| APIGW["Amazon API Gateway"]
-    APIGW --> L["AWS Lambda (Python 3.12)<br/>128–256 MB · rol LabRole"]
+    U["Usuario<br/>(navegador o Postman)"] -->|HTTPS + JWT| APIGW["Amazon API Gateway"]
+    APIGW --> L["AWS Lambda (Python 3.12)<br/>app Flask: frontend + API<br/>256 MB · rol LabRole"]
     L -->|CALL sp_* / SELECT vw_*| RDS[("Amazon RDS PostgreSQL<br/>db.t3.micro · 20 GiB")]
     L -->|PutItem| DDB[("Amazon DynamoDB On-Demand<br/>bitácora de auditoría / eventos")]
     ENV["Variables de entorno<br/>RDS endpoint · credenciales temporales"] -.-> L
@@ -163,15 +173,19 @@ flowchart TB
 | Amazon RDS for PostgreSQL 18.3 | Base de datos (`db-billing-postgres`, db.t3.micro, 20 GiB gp2, us-east-1) | Base administrada con respaldos, cifrado y parches; cumple el límite del Learner Lab |
 | Amazon VPC y Security Groups | Red y firewall de la instancia | El puerto 5432 sólo acepta la IP del equipo |
 | AWS Academy Learner Lab | Cuenta y consola de AWS | Entorno oficial de la materia (crédito de 100 USD) |
-| PostgreSQL (PL/pgSQL) | Tablas, 21 SP, 11 funciones, 11 vistas, 1 trigger | Procedimientos con transacciones y control de errores por regla |
+| PostgreSQL (PL/pgSQL) | Tablas, 21 SP, 11 funciones, 21 vistas, 1 trigger | Procedimientos con transacciones y control de errores por regla |
 | PostgreSQL 18.7 local | Plan B para la demo (servidor local instalado con winget) | Mismo comportamiento sin depender de la red; antes se validó también en 16.15 |
 | pgAdmin 4 y psql | Carga de scripts, consultas y demo | Clientes oficiales de PostgreSQL |
 | PowerShell y Bash | Scripts de despliegue `scripts/cargar_bd.*` | Carga reproducible: leen `.env`, protegen contra borrados y cuentan pruebas |
-| Python 3 y bcrypt | Hash de las contraseñas de las cuentas de demostración | La base nunca recibe contraseñas en texto plano |
+| Flask 3.1 (Python) | Aplicación completa: frontend con Jinja y API REST | Lenguaje y framework que pide la rúbrica; Jinja escapa la salida contra XSS |
+| psycopg 3 + psycopg-pool | Conexión a RDS con SSL `verify-full` y pool de conexiones | Parámetros enlazados en el servidor: sin inyección SQL |
+| PyJWT, bcrypt, pydantic | Tokens JWT, hash de contraseñas y validación de entradas | Autenticación con tokens, contraseñas sin texto plano, entradas acotadas |
+| pytest | 25 pruebas de la API y del frontend contra RDS | Cada prueba se revierte; no deja datos |
+| OpenAPI 3.0 | `docs/openapi.yaml`, importable en Postman | Entregable de la rúbrica |
 | Git | Control de versiones | Historial y trabajo coordinado |
 | draw.io | Modelo entidad-relación original | Diagrama editable por el equipo |
 | Claude (asistente de IA) | Apoyo en especificaciones, scripts, pruebas, prototipo y documentación | El equipo revisó y validó cada entregable |
-| *Planeado:* API Gateway, Lambda, DynamoDB, FastAPI, psycopg 3 | Capa de aplicación | Requeridos por la rúbrica |
+| *Planeado:* API Gateway, Lambda (`apig-wsgi`), DynamoDB (`boto3`) | Despliegue de la aplicación y bitácora | Requeridos por la rúbrica; el código ya los soporta |
 
 ---
 
@@ -483,7 +497,8 @@ sequenceDiagram
 | Seguridad | SP20 `sp_registrar_usuario`, SP21 `sp_registrar_intento_acceso` | RN-32 usuarios y roles · RN-33 bloqueo por intentos |
 
 - **Funciones:** `fn_saldo_factura`, `fn_empleado_puede`, `fn_tasa_impuesto`, `fn_tasa_iva`, `fn_descuento_automatico`, `fn_antiguedad_saldos`, `fn_credenciales_usuario`, `fn_datos_emisor`, `fn_fecha_local`, `fn_hoy` y la del trigger `fn_tg_auditar_tarifa`.
-- **Vistas:** `vw_catalogo_servicios`, `vw_ficha_servicio`, `vw_facturas`, `vw_ventas_categoria`, `vw_cobranza_metodo`, `vw_antiguedad_saldos`, `vw_auditoria_tarifas`, `vw_polizas`, `vw_balanza`, `vw_usuarios` y `vw_impuestos`.
+- **Vistas de reporte:** `vw_catalogo_servicios`, `vw_ficha_servicio`, `vw_facturas`, `vw_ventas_categoria`, `vw_cobranza_metodo`, `vw_antiguedad_saldos`, `vw_auditoria_tarifas`, `vw_polizas`, `vw_balanza`, `vw_usuarios` y `vw_impuestos`.
+- **Vistas de lectura para la aplicación:** `vw_clientes`, `vw_detalle_factura`, `vw_pagos`, `vw_metodos_pago`, `vw_comprobantes`, `vw_cierres_fiscales`, `vw_caracteristicas`, `vw_categorias`, `vw_factura_impuestos` y `vw_empleados`. La aplicación nunca consulta tablas directamente.
 
 ### 5.4 Permisos por rol
 
@@ -524,7 +539,7 @@ Carga en Amazon RDS (PostgreSQL 18.3, SSL `verify-full`) el 19 de noviembre de 2
 | Tablas | 20 | 8 |
 | Procedimientos almacenados | 21 | 10 |
 | Funciones | 11 | — |
-| Vistas | 11 | — |
+| Vistas | 21 | — |
 | Servicios | 100 | 100 |
 | Características | 50 | 50 |
 | Valores servicio-característica | 1,220 | — |
@@ -550,7 +565,24 @@ Ejemplos de pruebas de cálculo:
 - **Cierre fiscal:** el cierre diario de los escenarios da 5 facturas emitidas, 1 cancelada, $227,915.87 facturados y $122,466.67 cobrados.
 - **Balanza:** el saldo de la cuenta Clientes es igual a la suma de saldos de las facturas por cobrar.
 
-### 6.3 Escenarios cargados (`vw_facturas`)
+### 6.3 Pruebas de la aplicación (`tests/`, pytest)
+
+25 pruebas contra RDS. Cada una corre dentro de una transacción que se revierte, así que no dejan datos.
+
+| Área | Qué se comprueba |
+| --- | --- |
+| Flujo completo | Borrador → concepto → emisión ($11,149.92) → abono → RN-24 al cancelar → liquidación → CFDI, todo por la API |
+| Reglas de negocio | Los errores RN-xx llegan como HTTP 422 y se muestran en la página |
+| Cálculos | Retenciones ($7,233.35) y descuento por convenio ($2,800) a través de la API |
+| JWT | Sin token, token alterado, vencido o firmado con otra clave → 401 |
+| Roles | Auxiliar y Cajero no facturan; Facturista no cobra ni cancela; sólo el Gerente administra |
+| Contraseñas | El alta guarda un hash bcrypt; contraseña débil → 400; bloqueo al quinto intento → 423 |
+| Inyección SQL | `' OR 1=1; DROP TABLE ...` en búsqueda, ruta y login no tiene efecto |
+| XSS | Un cliente llamado `<script>...</script>` se muestra escapado |
+| CSRF y redirección | POST sin token CSRF no ejecuta nada; `siguiente=//sitio-externo` se ignora |
+| Frontend | Todas las páginas cargan para el Gerente; el Auxiliar no ve ni entra a Administración |
+
+### 6.4 Escenarios cargados (`vw_facturas`)
 
 | Folio | Cliente | Total (MXN) | Saldo (MXN) | Estado | Qué demuestra |
 | --- | --- | --- | --- | --- | --- |
@@ -572,8 +604,9 @@ Ejemplos de pruebas de cálculo:
 
 | Fecha | Hito | Resultado |
 | --- | --- | --- |
+| 19 nov 2026 | Aplicación Flask (frontend + API REST) | 29 endpoints con JWT y RBAC, 7 pantallas, OpenAPI validado, esquema de DynamoDB; 25 de 25 pruebas |
 | 19 nov 2026 | Extensión de la base para la rúbrica | 10 tablas, 8 SP y RN-25 a RN-33; 63 de 63 pruebas en RDS |
-| 19 nov 2026 | Reorganización del repositorio | Estructura del checklist (`database/`, `docs/`, `frontend/`, `scripts/`), README y despliegue automatizado |
+| 19 nov 2026 | Reorganización del repositorio | Estructura del checklist (`database/`, `docs/`, `scripts/`), README y despliegue automatizado |
 | 19 nov 2026 | Evaluación contra la rúbrica oficial | Brechas identificadas y plan priorizado por puntos |
 | 19 nov 2026 | Prototipo de interfaz | Demo navegable de 4 pantallas con las mismas reglas |
 | 19 nov 2026 | Carga y pruebas en RDS | PostgreSQL 18.3, 31 de 31 pruebas de la versión inicial |
@@ -589,12 +622,13 @@ Ejemplos de pruebas de cálculo:
 
 ```mermaid
 flowchart LR
-    A["1 · Modelo ER<br/>✅"] --> B["2 · Script BD + SP<br/>✅"] --> C["3 · Despliegue RDS<br/>✅"] --> D["4 · Pruebas<br/>✅"] --> E["5 · Brechas de la rúbrica en BD<br/>✅ (falta DynamoDB)"] --> F["6 · API + JWT<br/>Lambda / API Gateway"] --> G["7 · Frontend conectado"] --> H["8 · Docs + GitHub<br/>entrega final"]
+    A["1 · Modelo ER<br/>✅"] --> B["2 · Script BD + SP<br/>✅"] --> C["3 · Despliegue RDS<br/>✅"] --> D["4 · Pruebas<br/>✅"] --> E["5 · Brechas de la rúbrica en BD<br/>✅"] --> F["6 · App Flask + JWT<br/>✅ local"] --> G["7 · Despliegue Lambda /<br/>API Gateway / DynamoDB"] --> H["8 · GitHub<br/>entrega final"]
     style A fill:#e3f3ea
     style B fill:#e3f3ea
     style C fill:#e3f3ea
     style D fill:#e3f3ea
     style E fill:#e3f3ea
+    style F fill:#e3f3ea
 ```
 
 ---
@@ -609,22 +643,24 @@ flowchart LR
 - [ ] Actualizar el diagrama de draw.io con las tablas 11 a 20
 
 ### Prioridad 2 · Arquitectura en AWS (rubro 2, 25 puntos)
-- [ ] DynamoDB On-Demand para la bitácora o los eventos inmutables, con esquema JSON e índices
-- [ ] API en Lambda (Python, 128–256 MB, `LabRole`) detrás de API Gateway
-- [x] Endpoint y credenciales de RDS en variables de entorno (`.env`); script de despliegue de la base
+- [x] Esquema de DynamoDB On-Demand con índices (`database/dynamodb/`); la app ya escribe los eventos
+- [ ] Crear la tabla `facturacion-eventos` en AWS (requiere autorización del equipo)
+- [x] Adaptador de Lambda (`src/lambda_handler.py`)
+- [ ] Desplegar la app en Lambda (Python, 256 MB, `LabRole`) detrás de API Gateway y conectarla a RDS
+- [x] Endpoint y credenciales en variables de entorno (`.env`); script de despliegue de la base
 - [ ] Apagar RDS fuera de horario y activar la protección contra borrado
 
 ### Prioridad 3 · Seguridad (rubro 4, 15 puntos)
-- [x] Contraseñas con bcrypt y bloqueo tras 5 intentos fallidos (en la base)
-- [ ] JWT en la API
-- [ ] Permisos por rol en cada endpoint (la base ya los valida en cada SP)
-- [ ] Consultas parametrizadas, escape contra XSS y pruebas que lo demuestren
+- [x] Contraseñas con bcrypt y bloqueo tras 5 intentos fallidos
+- [x] JWT en la API y en la web (cookie HttpOnly, SameSite=Strict)
+- [x] Permisos por rol en cada endpoint y otra vez en cada SP
+- [x] Consultas parametrizadas, escape contra XSS, CSRF, CSP y pruebas que lo demuestran
 
 ### Prioridad 4 · Frontend, documentación y Git (rubro 5, 10 puntos)
-- [ ] Frontend conectado a la API
+- [x] Frontend en Flask conectado a la base
 - [ ] GitHub con commits de los 4 integrantes
-- [ ] OpenAPI o colección de Postman en `/docs`
-- [x] `README.md` de despliegue y pruebas
+- [x] OpenAPI en `docs/openapi.yaml`
+- [x] `README.md` de despliegue, ejecución y pruebas
 
 ### Riesgos
 
@@ -634,7 +670,7 @@ flowchart LR
 | La IP del equipo cambia | No hay conexión desde un cliente local | Revisarla antes de cada sesión; Lambda no depende de ella |
 | Agotar los 100 USD | Se detiene el laboratorio | Apagar RDS, DynamoDB On-Demand, Lambda 128–256 MB |
 | La instancia no tiene protección contra borrado | Pérdida de la base | Activarla; el script reconstruye todo en minutos y hay respaldos con `pg_dump` |
-| El prototipo no conoce las reglas nuevas | En la demo visual no aparecen los descuentos por volumen ni las retenciones | Demostrarlas con el guion SQL de la sección 9.4 hasta conectar el frontend |
+| La IP cambia el día de la demo | La app local no llega a RDS | Actualizar la regla del security group o usar el servidor PostgreSQL local con `-EnvFile .env.local` |
 
 ### Preguntas para el profesor
 1. ¿Cuál es la fecha de la entrega final y de la demostración en vivo?
@@ -646,32 +682,39 @@ flowchart LR
 
 ## 9. Parte visual: prototipo y guion de pruebas
 
-### 9.1 Prototipo de interfaz
+### 9.1 Aplicación web (Flask)
 
-- **Archivo:** `frontend/prototipo_facturacion.html`. Se abre directamente en el navegador. Versión en línea: https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh (compartirla antes de la revisión).
-- **Qué es:** una aplicación web de 4 pantallas con los mismos datos semilla y las reglas RN-01 a RN-24. **No está conectada a RDS:** los datos viven en el navegador y se reinician al recargar. Las reglas RN-25 a RN-33 sólo existen en la base.
-- **Consola SQL lateral:** cada acción muestra el `CALL` equivalente y su resultado o error RN-xx.
+- **Ejecutar:** `flask --app src/wsgi.py run` y abrir http://127.0.0.1:5000. Cada integrante entra con su cuenta de demostración (contraseña `Demo2026!`).
+- **Conexión:** usa la base real en RDS. Lo que se haga en la demo queda guardado; para volver al estado inicial se ejecuta `.\scripts\cargar_bd.ps1 -Forzar`.
+- **Permisos:** el menú y los botones cambian según el rol, y la base vuelve a validar cada permiso.
+- **Prototipo original:** el prototipo estático de 4 pantallas se conserva como referencia de diseño en `docs/prototipo/` (https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh).
 
 | Pantalla | Qué muestra | Equivalente en la base |
 | --- | --- | --- |
-| Panel | Requisitos cumplidos, por cobrar, cobrado, ventas por categoría | `vw_ventas_categoria`, conteos |
-| Catálogo | 100 servicios con filtro y ficha técnica | `vw_catalogo_servicios`, `vw_ficha_servicio` |
-| Nueva factura | Cliente → conceptos → IVA y total → emitir | SP06, SP08, SP09, SP10 |
-| Facturas y cobranza | Lista con saldo; abonos, cancelar pago, cancelar factura | `vw_facturas`, SP11, SP12, SP13 |
+| Panel | Por cobrar, cobrado, facturas por estado, ventas por categoría, antigüedad | `vw_facturas`, `vw_ventas_categoria`, `vw_antiguedad_saldos`, `vw_cobranza_metodo` |
+| Catálogo y ficha | 100 servicios con búsqueda; ficha técnica, cambio de precio, activar/desactivar, asignar característica, historial de tarifas | `vw_catalogo_servicios`, `vw_ficha_servicio`, SP02 a SP05, `vw_auditoria_tarifas` |
+| Clientes | Lista con convenios y retenciones; alta | `vw_clientes`, SP01 |
+| Facturas | Lista por estado; crear borrador | `vw_facturas`, SP06 |
+| Factura | Conceptos, descuentos, emisión, pagos, cancelaciones, CFDI y pólizas | SP08 a SP13, SP15, SP18, `vw_polizas` |
+| Reportes | Antigüedad por rangos y fecha de corte, ventas, cobranza, balanza, cierres, tarifas | `fn_antiguedad_saldos`, `vw_balanza`, SP17 |
+| Administración | Usuarios, alta con bcrypt e historial de impuestos | SP14, SP20, `vw_usuarios`, `vw_impuestos` |
 
-### 9.2 Guion visual de pruebas (en el prototipo)
+### 9.2 Guion visual de pruebas (en la aplicación)
 
-| # | Acción | «Actuando como» | Resultado esperado |
+| # | Acción | Sesión | Resultado esperado |
 | --- | --- | --- | --- |
 | 1 | Catálogo → SRV-013 | cualquiera | Ficha con 13 características (RAM 4 GB, 2 vCPU, 99.9 %) |
-| 2 | Nueva factura → cliente 1 → Crear borrador | Ana Torres (Facturista) | `CALL sp_crear_factura(1, 2)` → F-000007 |
-| 3 | Agregar VPS 2 vCPU × 12, 10 % → Emitir a 30 días | Ana Torres | Total $11,149.92 |
-| 4 | Registrar abono de $5,000 por SPEI | Carlos Ruiz (Cajero) | Saldo $6,149.92 |
-| 5 | Cancelar factura | Carlos Ruiz | ❌ RN-24: tiene pagos aplicados (y sólo un Gerente puede cancelar) |
-| 6 | Registrar abono por $6,149.92 | Carlos Ruiz | Factura PAGADA |
-| 7 | Nueva factura → Crear borrador | Diego Salas (Auxiliar) | ❌ RN-10: no puede facturar |
-| 8 | Abono con «Cheque nominativo» en F-000002 | Carlos Ruiz | ❌ RN-20: método inactivo |
-| 9 | En un borrador nuevo, agregar concepto con 60 % de descuento | Ana Torres | ❌ RN-14: máximo 50 % |
+| 2 | Facturas → nueva factura para el cliente 1 | `ana.torres` (Facturista) | Borrador F-000007 |
+| 3 | Agregar VPS 2 vCPU × 12, 10 % → Emitir a 30 días | `ana.torres` | Total $11,149.92 y póliza de emisión |
+| 4 | Registrar abono de $5,000 por SPEI | `carlos.ruiz` (Cajero) | Saldo $6,149.92 |
+| 5 | Cancelar factura | `laura.mendez` (Gerente) | ❌ RN-24: tiene pagos aplicados |
+| 6 | Registrar abono por $6,149.92 | `carlos.ruiz` | Factura PAGADA |
+| 7 | Generar estructura CFDI 4.0 | `ana.torres` | JSON del comprobante en la página |
+| 8 | Abono con «Cheque nominativo» en F-000002 | `carlos.ruiz` | ❌ RN-20: método inactivo |
+| 9 | En un borrador nuevo, agregar concepto con 60 % de descuento | `ana.torres` | ❌ RN-14: máximo 50 % |
+| 10 | Nueva factura para Constructora Peninsular con SRV-001 | `ana.torres` | Retenciones $7,233.35, total $33,366.65 |
+| 11 | Entrar a Administración | `diego.salas` (Auxiliar) | Sin menú; error 403 si se escribe la URL |
+| 12 | 5 contraseñas equivocadas seguidas | cualquiera | ❌ RN-33: cuenta bloqueada 15 minutos |
 
 ### 9.3 El mismo guion contra RDS (pgAdmin o psql)
 
@@ -727,8 +770,10 @@ SELECT * FROM cierres_fiscales;
 | `06_error_regla.png` | Un `CALL` rechazado con su código RN-xx |
 | `07_polizas_balanza.png` | `vw_polizas` y `vw_balanza` |
 | `08_comprobante.png` | JSON de `sp_generar_comprobante` |
-| `09_prototipo_panel.png` | Panel del prototipo |
-| `10_erd_pgadmin.png` | ERD generado por pgAdmin desde la base real |
+| `09_app_panel.png` | Panel de la aplicación Flask |
+| `10_app_factura.png` | Página de una factura con pólizas y CFDI |
+| `11_pytest_25_ok.png` | Salida de `pytest tests -q` |
+| `12_erd_pgadmin.png` | ERD generado por pgAdmin desde la base real |
 
 ---
 
@@ -836,11 +881,14 @@ Diagramas de este archivo: arquitectura actual (3.1), arquitectura objetivo (3.2
 
 ## 12. Documentos relacionados
 
-- `README.md`: configuración, despliegue, pruebas y conexión con pgAdmin.
+- `README.md`: configuración, base, aplicación, pruebas, seguridad y despliegue.
 - Scripts de base de datos: `database/01_esquema.sql`, `02_procedimientos.sql`, `03_datos.sql` y `04_pruebas.sql`.
-- Resultado de las pruebas: `database/resultado_pruebas.txt`.
-- Despliegue: `scripts/cargar_bd.ps1` (Windows) y `scripts/cargar_bd.sh` (macOS/Linux).
-- Prototipo de interfaz: `frontend/prototipo_facturacion.html` · https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh
+- DynamoDB: `database/dynamodb/eventos_auditoria.json` y `database/dynamodb/README.md`.
+- Aplicación Flask: `src/app/`; pruebas en `tests/`.
+- Especificación de la API: `docs/openapi.yaml`.
+- Resultado de las pruebas de la base: `database/resultado_pruebas.txt`.
+- Despliegue de la base: `scripts/cargar_bd.ps1` (Windows) y `scripts/cargar_bd.sh` (macOS/Linux).
+- Prototipo estático original: `docs/prototipo/prototipo_facturacion.html` · https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh
 - Especificaciones técnicas: https://claude.ai/artifact/Cr6P2ecmVk3tDjh8MbDSpb
 - Reporte de avance (versión editable): https://claude.ai/artifact/Vnb1UvgPUG5hqHFq6ovPHT
 - Modelo ER original: `BdOptativa.drawio` (**aún no está en el repositorio**; agregarlo a `docs/`).

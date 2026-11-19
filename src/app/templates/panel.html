@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado with context %}
+{% block titulo %}Panel{% endblock %}
+{% block contenido %}
+<h1>Panel</h1>
+<p class="sub">Resumen de facturación y cobranza.</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="etiqueta">Por cobrar</div><div class="valor">{{ p.por_cobrar | dinero }}</div></div>
+  <div class="kpi"><div class="etiqueta">Cobrado</div><div class="valor">{{ p.cobrado | dinero }}</div></div>
+  {% for e in ['BORRADOR', 'EMITIDA', 'PAGADA', 'CANCELADA'] %}
+    <div class="kpi"><div class="etiqueta">{{ estado(e) }}</div>
+      <div class="valor">{{ p.por_estado[e].facturas if e in p.por_estado else 0 }}</div></div>
+  {% endfor %}
+</div>
+
+<div class="rejilla">
+  <section class="tarjeta">
+    <h2>Ventas netas por categoría</h2>
+    {% set maximo = (p.ventas_categoria | map(attribute='venta_neta') | max) if p.ventas_categoria else 1 %}
+    <table>
+      <thead><tr><th>Categoría</th><th class="num">Venta neta</th></tr></thead>
+      <tbody>
+      {% for v in p.ventas_categoria %}
+        <tr><td>{{ v.nombre_categoria }}<br><progress value="{{ v.venta_neta }}" max="{{ maximo }}"></progress></td>
+            <td class="num">{{ v.venta_neta | dinero }}</td></tr>
+      {% else %}<tr><td colspan="2" class="vacio">Sin ventas</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Antigüedad de saldos</h2>
+    <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Cliente</th><th class="num">Por vencer</th><th class="num">Vencido</th><th class="num">Total</th></tr></thead>
+      <tbody>
+      {% for a in p.antiguedad %}
+        <tr><td>{{ a.cliente }}</td><td class="num">{{ a.por_vencer | dinero }}</td>
+            <td class="num">{{ (a.saldo_total - a.por_vencer) | dinero }}</td><td class="num">{{ a.saldo_total | dinero }}</td></tr>
+      {% else %}<tr><td colspan="4" class="vacio">Sin saldos pendientes</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="nota"><a href="{{ url_for('web.reportes') }}">Ver rangos de 1–30, 31–60, 61–90 y más de 90 días</a></p>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Cobranza por método de pago</h2>
+    <table>
+      <thead><tr><th>Método</th><th class="num">Pagos</th><th class="num">Cobrado</th></tr></thead>
+      <tbody>
+      {% for c in p.cobranza %}
+        <tr><td>{{ c.nombre_metodo }}</td><td class="num">{{ c.pagos }}</td><td class="num">{{ c.cobrado | dinero }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

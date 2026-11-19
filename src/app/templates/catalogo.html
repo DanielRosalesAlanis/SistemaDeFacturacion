@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, activo with context %}
+{% block titulo %}Catálogo{% endblock %}
+{% block contenido %}
+<h1>Catálogo de servicios</h1>
+<p class="sub">{{ servicios | length }} servicio(s){{ ' con el filtro aplicado' if q or categoria }}.</p>
+
+<section class="tarjeta">
+  <form method="get" class="en-linea">
+    <label>Buscar <input name="q" value="{{ q }}" placeholder="Código o nombre" maxlength="100"></label>
+    <label>Categoría
+      <select name="categoria">
+        <option value="">Todas</option>
+        {% for c in categorias %}<option {{ 'selected' if c.nombre_categoria == categoria }}>{{ c.nombre_categoria }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit">Filtrar</button>
+    {% if q or categoria %}<a href="{{ url_for('web.catalogo') }}">Quitar filtro</a>{% endif %}
+  </form>
+</section>
+
+<section class="tarjeta tabla-scroll">
+  <table>
+    <thead><tr><th>Código</th><th>Servicio</th><th>Categoría</th><th class="num">Precio</th><th>Unidad</th><th class="num">Caract.</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for s in servicios %}
+      <tr>
+        <td><a href="{{ url_for('web.ficha', codigo=s.codigo_servicio) }}">{{ s.codigo_servicio }}</a></td>
+        <td>{{ s.nombre_servicio }}</td><td>{{ s.nombre_categoria }}</td>
+        <td class="num">{{ s.precio_base | dinero }}</td><td>{{ s.unidad_medida }}</td>
+        <td class="num">{{ s.num_caracteristicas }}</td><td>{{ activo(s.estado) }}</td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="vacio">No hay servicios con ese filtro</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if puede('Gerente') %}
+<section class="tarjeta">
+  <h2>Nuevo servicio</h2>
+  <form method="post" action="{{ url_for('web.registrar_servicio') }}" class="en-linea">
+    {{ csrf_campo() }}
+    <label>Categoría
+      <select name="id_categoria" required>{% for c in categorias %}<option value="{{ c.id_categoria }}">{{ c.nombre_categoria }}</option>{% endfor %}</select>
+    </label>
+    <label>Código <input name="codigo" required maxlength="20" placeholder="SRV-101"></label>
+    <label>Nombre <input name="nombre" required maxlength="150"></label>
+    <label>Precio <input name="precio" type="number" step="0.01" min="0.01" required></label>
+    <label>Unidad
+      <select name="unidad">{% for u in ['Servicio', 'Hora', 'Mes', 'Año', 'Evento'] %}<option>{{ u }}</option>{% endfor %}</select>
+    </label>
+    <label>Descripción <input name="descripcion" maxlength="255"></label>
+    <button type="submit">Registrar</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,38 @@
+{
+  "TableName": "facturacion-eventos",
+  "BillingMode": "PAY_PER_REQUEST",
+  "AttributeDefinitions": [
+    { "AttributeName": "entidad",      "AttributeType": "S" },
+    { "AttributeName": "fecha_evento", "AttributeType": "S" },
+    { "AttributeName": "id_usuario",   "AttributeType": "S" },
+    { "AttributeName": "tipo",         "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "entidad",      "KeyType": "HASH" },
+    { "AttributeName": "fecha_evento", "KeyType": "RANGE" }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "por_usuario",
+      "KeySchema": [
+        { "AttributeName": "id_usuario",   "KeyType": "HASH" },
+        { "AttributeName": "fecha_evento", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    },
+    {
+      "IndexName": "por_tipo",
+      "KeySchema": [
+        { "AttributeName": "tipo",         "KeyType": "HASH" },
+        { "AttributeName": "fecha_evento", "KeyType": "RANGE" }
+      ],
+      "Projection": {
+        "ProjectionType": "INCLUDE",
+        "NonKeyAttributes": ["entidad", "id_usuario", "rol"]
+      }
+    }
+  ],
+  "Tags": [
+    { "Key": "Proyecto", "Value": "Facturacion-Equipo3" }
+  ]
+}

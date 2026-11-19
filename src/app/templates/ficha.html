@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, activo, boton_post with context %}
+{% set s = f.servicio %}
+{% block titulo %}{{ s.codigo_servicio }}{% endblock %}
+{% block contenido %}
+<p><a href="{{ url_for('web.catalogo') }}">← Catálogo</a></p>
+<h1>{{ s.codigo_servicio }} · {{ s.nombre_servicio }}</h1>
+<p class="sub">{{ s.nombre_categoria }} · {{ s.precio_base | dinero }} por {{ s.unidad_medida | lower }} · {{ activo(s.estado) }}</p>
+
+<div class="rejilla">
+  <section class="tarjeta">
+    <h2>Ficha técnica ({{ f.caracteristicas | length }} características)</h2>
+    <table>
+      <tbody>
+      {% for c in f.caracteristicas %}
+        <tr><td>{{ c.nombre_caracteristica }}</td><td>{{ c.valor }} {{ c.unidad or '' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if s.descripcion %}<p class="nota">{{ s.descripcion }}</p>{% endif %}
+  </section>
+
+  <section class="tarjeta">
+    {% if puede('Gerente', 'Facturista') %}
+      <h2>Cambiar precio</h2>
+      <form method="post" action="{{ url_for('web.precio', id_servicio=s.id_servicio) }}" class="en-linea">
+        {{ csrf_campo() }}<input type="hidden" name="volver_a" value="{{ request.path }}">
+        <label>Nuevo precio <input name="precio" type="number" step="0.01" min="0.01" required value="{{ s.precio_base }}"></label>
+        <button type="submit">Guardar</button>
+      </form>
+      <p class="nota">Una variación mayor a ±30 % sólo la autoriza un Gerente (RN-08). Cada cambio queda auditado.</p>
+    {% endif %}
+
+    {% if puede('Gerente') %}
+      <h3>Estado</h3>
+      <form method="post" action="{{ url_for('web.estado_servicio', id_servicio=s.id_servicio) }}" class="boton-solo">
+        {{ csrf_campo() }}<input type="hidden" name="volver_a" value="{{ request.path }}">
+        <input type="hidden" name="activo" value="{{ '0' if s.estado else '1' }}">
+        <button type="submit" class="secundario" {% if s.estado %}data-confirmar="¿Desactivar {{ s.codigo_servicio }}? Ya no se podrá facturar."{% endif %}>
+          {{ 'Desactivar' if s.estado else 'Activar' }}</button>
+      </form>
+
+      <h3>Asignar característica</h3>
+      <form method="post" action="{{ url_for('web.caracteristica', id_servicio=s.id_servicio) }}" class="en-linea">
+        {{ csrf_campo() }}<input type="hidden" name="volver_a" value="{{ request.path }}">
+        <label>Característica
+          <select name="id_caracteristica">
+            {% for c in caracteristicas %}<option value="{{ c.id_caracteristica }}">{{ c.nombre_caracteristica }} ({{ c.tipo_dato | lower }}{{ ', ' ~ c.unidad if c.unidad }})</option>{% endfor %}
+          </select>
+        </label>
+        <label>Valor <input name="valor" required maxlength="100"></label>
+        <button type="submit">Asignar</button>
+      </form>
+    {% endif %}
+
+    <h3>Cambios de tarifa</h3>
+    <table>
+      <thead><tr><th>Fecha</th><th class="num">Anterior</th><th class="num">Nuevo</th><th class="num">Var.</th><th>Quién</th></tr></thead>
+      <tbody>
+      {% for a in f.cambios_tarifa %}
+        <tr><td>{{ a.fecha_cambio | fecha }}</td><td class="num">{{ a.precio_anterior | dinero }}</td>
+            <td class="num">{{ a.precio_nuevo | dinero }}</td><td class="num">{{ a.variacion_pct }} %</td><td>{{ a.empleado }}</td></tr>
+      {% else %}<tr><td colspan="5" class="vacio">Sin cambios registrados</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Facturación{% endblock %} · Equipo 3</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+{% if identidad %}
+<header class="barra">
+  <div class="contenedor">
+    <a class="logo" href="{{ url_for('web.panel') }}">Facturación</a>
+    <nav class="nav">
+      {% set actual = request.endpoint or '' %}
+      <a href="{{ url_for('web.panel') }}" class="{{ 'activo' if actual == 'web.panel' }}">Panel</a>
+      <a href="{{ url_for('web.catalogo') }}" class="{{ 'activo' if actual in ('web.catalogo', 'web.ficha') }}">Catálogo</a>
+      <a href="{{ url_for('web.clientes') }}" class="{{ 'activo' if actual == 'web.clientes' }}">Clientes</a>
+      <a href="{{ url_for('web.facturas') }}" class="{{ 'activo' if actual in ('web.facturas', 'web.factura') }}">Facturas</a>
+      <a href="{{ url_for('web.reportes') }}" class="{{ 'activo' if actual == 'web.reportes' }}">Reportes</a>
+      {% if puede('Gerente') %}<a href="{{ url_for('web.admin') }}" class="{{ 'activo' if actual == 'web.admin' }}">Administración</a>{% endif %}
+    </nav>
+    <div class="quien">
+      <span class="nombre">{{ identidad.nombre }}</span>
+      <span class="rol">{{ identidad.rol }}</span>
+      <form method="post" action="{{ url_for('web.logout') }}" class="boton-solo">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="mini">Salir</button>
+      </form>
+    </div>
+  </div>
+</header>
+{% endif %}
+<main class="contenedor">
+  {% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+      <ul class="avisos">
+        {% for categoria, mensaje in mensajes %}<li class="{{ categoria }}">{{ mensaje }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

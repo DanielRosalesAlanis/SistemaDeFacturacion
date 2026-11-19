@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_campo, activo with context %}
+{% block titulo %}Administración{% endblock %}
+{% block contenido %}
+<h1>Administración</h1>
+<p class="sub">Usuarios, roles e impuestos. Sólo Gerente.</p>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Usuarios</h2>
+  <table>
+    <thead><tr><th>Usuario</th><th>Empleado</th><th>Puesto</th><th>Rol</th><th>Estado</th><th class="num">Intentos fallidos</th><th>Bloqueada hasta</th><th>Último acceso</th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr><td>{{ u.nombre_usuario }}</td><td>{{ u.empleado }}</td><td>{{ u.puesto }}</td><td>{{ u.rol }}</td><td>{{ activo(u.activo) }}</td>
+          <td class="num">{{ u.intentos_fallidos }}</td><td>{{ u.bloqueado_hasta | fecha }}</td><td>{{ u.ultimo_acceso | fecha }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% set sin_cuenta = empleados | rejectattr('tiene_usuario') | selectattr('estado') | list %}
+  <h3>Nuevo usuario</h3>
+  {% if sin_cuenta %}
+  <form method="post" action="{{ url_for('web.registrar_usuario') }}" class="en-linea" autocomplete="off">
+    {{ csrf_campo() }}
+    <label>Empleado
+      <select name="id_empleado">{% for e in sin_cuenta %}<option value="{{ e.id_empleado }}">{{ e.nombre }} ({{ e.puesto }})</option>{% endfor %}</select>
+    </label>
+    <label>Usuario <input name="nombre_usuario" required minlength="3" maxlength="50" pattern="[A-Za-z0-9._\-]+"></label>
+    <label>Contraseña <input name="contrasena" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>
+    <label>Rol <select name="rol">{% for r in ['Auxiliar', 'Cajero', 'Facturista', 'Gerente'] %}<option>{{ r }}</option>{% endfor %}</select></label>
+    <button type="submit">Crear usuario</button>
+  </form>
+  <p class="nota">Mínimo 10 caracteres con letras y números. La contraseña se cifra con bcrypt en la aplicación; la base sólo guarda el hash.</p>
+  {% else %}
+  <p class="nota">Todos los empleados activos ya tienen cuenta.</p>
+  {% endif %}
+</section>
+
+<section class="tarjeta tabla-scroll">
+  <h2>Impuestos (historial de tasas)</h2>
+  <table>
+    <thead><tr><th>Impuesto</th><th>Tipo</th><th class="num">Tasa</th><th>Desde</th><th>Hasta</th><th>Vigente</th><th>Descripción</th></tr></thead>
+    <tbody>
+    {% for i in impuestos %}
+      <tr><td>{{ i.clave }}</td><td>{{ i.tipo | lower }}</td><td class="num">{{ i.tasa | pct }}</td><td>{{ i.vigente_desde | fecha(false) }}</td>
+          <td>{{ i.vigente_hasta | fecha(false) }}</td><td>{{ activo(i.vigente) }}</td><td>{{ i.descripcion }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <h3>Registrar nueva tasa</h3>
+  <form method="post" action="{{ url_for('web.registrar_tasa') }}" class="en-linea">
+    {{ csrf_campo() }}
+    <label>Impuesto <select name="clave"><option>IVA</option><option>ISR</option></select></label>
+    <label>Tipo <select name="tipo"><option>TRASLADO</option><option>RETENCION</option></select></label>
+    <label>Tasa (fracción) <input name="tasa" type="number" step="0.000001" min="0" max="0.999999" placeholder="0.16" required></label>
+    <label>Vigente desde <input name="vigente_desde" type="date" required></label>
+    <button type="submit" data-confirmar="La tasa anterior se cerrará un día antes de la nueva vigencia. ¿Continuar?">Registrar</button>
+  </form>
+</section>
+{% endblock %}

@@ -31,13 +31,14 @@ if [[ $SOLO_PRUEBAS -eq 0 ]]; then
   if [[ "$existe" == "1" ]]; then
     [[ $FORZAR -eq 1 ]] || { echo "El esquema facturacion ya existe y 01_esquema.sql lo BORRA. Usa --forzar (y --respaldo)." >&2; exit 1; }
     if [[ $RESPALDO -eq 1 ]]; then
-      archivo="facturacion_$(date +%Y%m%d_%H%M).dump"
+      mkdir -p respaldos
+      archivo="respaldos/facturacion_$(date +%Y%m%d_%H%M).dump"
       pg_dump -n facturacion -Fc -f "$archivo" && echo "Respaldo: $archivo"
     fi
   fi
   for f in 01_esquema.sql 02_procedimientos.sql 03_datos.sql; do
     echo "Cargando database/$f ..."
-    psql -X -q -v ON_ERROR_STOP=1 -f "database/$f" 2>&1 | grep -vE 'NOTICE|DETAIL|^drop cascades' || true
+    psql -X -q -v ON_ERROR_STOP=1 -f "database/$f" 2>&1 | grep -vE 'NOTICE|AVISO|DETAIL|DETALLE|^drop cascades' || true
     [[ ${PIPESTATUS[0]} -eq 0 ]] || { echo "Falló $f" >&2; exit 1; }
   done
 fi

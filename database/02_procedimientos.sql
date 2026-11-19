@@ -586,7 +586,8 @@ END $$;
 -- V1 Catálogo: servicio, categoría y número de características
 CREATE OR REPLACE VIEW vw_catalogo_servicios AS
 SELECT s.codigo_servicio, s.nombre_servicio, c.nombre_categoria, s.precio_base,
-       s.unidad_medida, s.estado, count(sc.id_caracteristica) AS num_caracteristicas
+       s.unidad_medida, s.estado, count(sc.id_caracteristica) AS num_caracteristicas,
+       s.id_servicio, s.id_categoria, s.descripcion
   FROM servicios s
   JOIN categorias_servicio c USING (id_categoria)
   LEFT JOIN servicio_caracteristicas sc USING (id_servicio)
@@ -595,7 +596,8 @@ SELECT s.codigo_servicio, s.nombre_servicio, c.nombre_categoria, s.precio_base,
 
 -- V2 Ficha técnica de cada servicio
 CREATE OR REPLACE VIEW vw_ficha_servicio AS
-SELECT s.codigo_servicio, s.nombre_servicio, k.nombre_caracteristica, sc.valor, k.unidad
+SELECT s.codigo_servicio, s.nombre_servicio, k.nombre_caracteristica, sc.valor, k.unidad,
+       s.id_servicio, k.id_caracteristica, k.tipo_dato
   FROM servicio_caracteristicas sc
   JOIN servicios s       USING (id_servicio)
   JOIN caracteristicas k USING (id_caracteristica)
@@ -611,7 +613,7 @@ SELECT f.id_factura, f.folio,
        CASE WHEN f.estado = 'CANCELADA' THEN 0 ELSE fn_saldo_factura(f.id_factura) END AS saldo,
        CASE WHEN f.estado = 'EMITIDA' AND f.fecha_vencimiento < now()
             THEN extract(day FROM now() - f.fecha_vencimiento)::INT ELSE 0 END AS dias_atraso,
-       f.estado
+       f.estado, f.id_cliente, f.id_empleado
   FROM facturas f
   JOIN clientes c  USING (id_cliente)
   JOIN empleados e USING (id_empleado)
@@ -1210,4 +1212,87 @@ SELECT id_impuesto, clave, tipo, tasa, vigente_desde, vigente_hasta,
        descripcion
   FROM impuestos_historico
  ORDER BY clave, tipo, vigente_desde;
+
+-- =====================================================================
+--  VISTAS DE LECTURA PARA LA API (la aplicación sólo lee de vistas)
+-- =====================================================================
+
+-- V12 Clientes con su tipo de persona y condiciones pactadas
+CREATE OR REPLACE VIEW vw_clientes AS
+SELECT c.id_cliente, trim(c.nombre || ' ' || coalesce(c.apellido, '')) AS cliente,
+       c.identificacion_fiscal AS rfc,
+       CASE WHEN length(c.identificacion_fiscal) = 12 THEN 'MORAL' ELSE 'FISICA' END AS persona,
+       c.correo, c.telefono, c.direccion, c.estado,
+       coalesce(k.descuento_pct, 0) AS descuento_pct,
+       coalesce(k.retiene_isr, FALSE) AS retiene_isr,
+       coalesce(k.retiene_iva, FALSE) AS retiene_iva
+  FROM clientes c
+  LEFT JOIN condiciones_cliente k USING (id_cliente)
+ ORDER BY c.id_cliente;
+
+-- V13 Renglones de cada factura
+CREATE OR REPLACE VIEW vw_detalle_factura AS
+SELECT d.id_detalle, d.id_factura, f.folio, s.id_servicio, s.codigo_servicio, s.nombre_servicio,
+       s.unidad_medida, d.cantidad, d.precio_unitario, d.descuento, d.subtotal
+  FROM detalle_factura d
+  JOIN facturas f  USING (id_factura)
+  JOIN servicios s USING (id_servicio)
+ ORDER BY d.id_factura, d.id_detalle;
+
+-- V14 Pagos con su método
+CREATE OR REPLACE VIEW vw_pagos AS
+SELECT p.id_pago, p.id_factura, f.folio, m.nombre_metodo AS metodo, p.fecha_pago,
+       p.monto, p.referencia, p.estado
+  FROM pagos p
+  JOIN facturas f     USING (id_factura)
+  JOIN metodos_pago m USING (id_metodo_pago)
+ ORDER BY p.id_pago;
+
+-- V15 Métodos de pago
+CREATE OR REPLACE VIEW vw_metodos_pago AS
+SELECT id_metodo_pago, nombre_metodo, descripcion, estado
+  FROM metodos_pago
+ ORDER BY id_metodo_pago;
+
+-- V16 Comprobantes generados
+CREATE OR REPLACE VIEW vw_comprobantes AS
+SELECT c.id_factura, f.folio, c.version_cfdi, c.estado, c.uuid_fiscal, c.fecha_generacion, c.contenido
+  FROM comprobantes c
+  JOIN facturas f USING (id_factura)
+ ORDER BY c.id_factura;
+
+-- V18 Diccionario de características
+CREATE OR REPLACE VIEW vw_caracteristicas AS
+SELECT id_caracteristica, nombre_caracteristica, tipo_dato, unidad, descripcion
+  FROM caracteristicas
+ ORDER BY id_caracteristica;
+
+-- V19 Categorías
+CREATE OR REPLACE VIEW vw_categorias AS
+SELECT id_categoria, nombre_categoria, descripcion, estado
+  FROM categorias_servicio
+ ORDER BY id_categoria;
+
+-- V20 Desglose de impuestos de cada factura
+CREATE OR REPLACE VIEW vw_factura_impuestos AS
+SELECT fi.id_factura, i.clave, i.tipo, i.tasa, fi.base, fi.importe
+  FROM factura_impuestos fi
+  JOIN impuestos_historico i USING (id_impuesto)
+ ORDER BY fi.id_factura, i.tipo DESC, i.clave;
+
+-- V21 Empleados y si ya tienen cuenta
+CREATE OR REPLACE VIEW vw_empleados AS
+SELECT e.id_empleado, e.nombre, e.puesto, e.correo, e.estado,
+       EXISTS (SELECT 1 FROM usuarios u WHERE u.id_empleado = e.id_empleado) AS tiene_usuario
+  FROM empleados e
+ ORDER BY e.id_empleado;
+
+-- V17 Cierres fiscales con quién los hizo
+CREATE OR REPLACE VIEW vw_cierres_fiscales AS
+SELECT c.id_cierre, c.tipo, c.periodo_inicio, c.periodo_fin, c.facturas_emitidas, c.facturas_canceladas,
+       c.subtotal, c.iva_trasladado, c.retenciones, c.total_facturado, c.total_cobrado,
+       e.nombre AS empleado, c.fecha_cierre
+  FROM cierres_fiscales c
+  JOIN empleados e USING (id_empleado)
+ ORDER BY c.periodo_inicio, c.tipo;
 

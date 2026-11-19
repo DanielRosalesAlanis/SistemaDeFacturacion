@@ -4,7 +4,7 @@ SET
  Tablas                          |       20 |      8
  Procedimientos almacenados      |       21 |     10
  Funciones                       |       11 |       
- Vistas                          |       11 |       
+ Vistas                          |       21 |       
  Servicios                       |      100 |    100
  Características                 |       50 |     50
  Valores servicio-característica |     1220 |    100
@@ -138,14 +138,14 @@ psql:database/04_pruebas.sql:261: NOTICE:  OK  RN-32: el permiso viene del rol d
 CALL
 psql:database/04_pruebas.sql:277: NOTICE:  OK  RN-33: bloqueo de 15 minutos al quinto intento fallido y reinicio con acceso correcto
 CALL
- id_factura |  folio   |                    cliente                    |      rfc      |    empleado     |       fecha_emision        |     fecha_vencimiento      | subtotal  | impuestos | retenciones |   total   |  saldo   | dias_atraso |  estado   
-------------+----------+-----------------------------------------------+---------------+-----------------+----------------------------+----------------------------+-----------+-----------+-------------+-----------+----------+-------------+-----------
-          1 | F-000001 | Comercializadora del Valle de México SA de CV | CMA180315KJ2  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-11-19 22:52:11.783698 |  36609.20 |   5857.47 |        0.00 |  42466.67 |     0.00 |           0 | PAGADA
-          2 | F-000002 | Tecnologías Integrales del Norte SA de CV     | TEC200110AB5  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-19 22:52:11.783698 | 139750.00 |  22360.00 |        0.00 | 162110.00 | 82110.00 |           0 | EMITIDA
-          3 | F-000003 | Jorge Gómez Martínez                          | GOMJ850412HT3 | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-04 22:52:11.783698 |   1300.00 |    208.00 |        0.00 |   1508.00 |        0 |           0 | CANCELADA
-          4 | F-000004 | Educación Superior Digital AC                 | EDU100505RT7  | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-12-19 22:52:11.783698 |  17720.00 |   2835.20 |        0.00 |  20555.20 | 20555.20 |           0 | EMITIDA
-          5 | F-000005 | Sofía Ramírez Sánchez                         | RAMS880115KL5 | Ana Torres Vega | 2026-11-19 22:52:11.783698 | 2026-11-19 22:52:11.783698 |   2400.00 |    384.00 |        0.00 |   2784.00 |  2784.00 |           0 | EMITIDA
-          6 | F-000006 | Hospital San Rafael SC                        | HOS210330CD6  | Ana Torres Vega |                            |                            |  22000.00 |   3520.00 |        0.00 |  25520.00 | 25520.00 |           0 | BORRADOR
+ id_factura |  folio   |                    cliente                    |      rfc      |    empleado     |       fecha_emision        |     fecha_vencimiento      | subtotal  | impuestos | retenciones |   total   |  saldo   | dias_atraso |  estado   | id_cliente | id_empleado 
+------------+----------+-----------------------------------------------+---------------+-----------------+----------------------------+----------------------------+-----------+-----------+-------------+-----------+----------+-------------+-----------+------------+-------------
+          1 | F-000001 | Comercializadora del Valle de México SA de CV | CMA180315KJ2  | Ana Torres Vega | 2026-11-19 23:54:55.060135 | 2026-11-19 23:54:55.060135 |  36609.20 |   5857.47 |        0.00 |  42466.67 |     0.00 |           0 | PAGADA    |          1 |           2
+          2 | F-000002 | Tecnologías Integrales del Norte SA de CV     | TEC200110AB5  | Ana Torres Vega | 2026-11-19 23:54:55.060135 | 2026-12-19 23:54:55.060135 | 139750.00 |  22360.00 |        0.00 | 162110.00 | 82110.00 |           0 | EMITIDA   |          2 |           2
+          3 | F-000003 | Jorge Gómez Martínez                          | GOMJ850412HT3 | Ana Torres Vega | 2026-11-19 23:54:55.060135 | 2026-12-04 23:54:55.060135 |   1300.00 |    208.00 |        0.00 |   1508.00 |        0 |           0 | CANCELADA |          4 |           2
+          4 | F-000004 | Educación Superior Digital AC                 | EDU100505RT7  | Ana Torres Vega | 2026-11-19 23:54:55.060135 | 2026-12-19 23:54:55.060135 |  17720.00 |   2835.20 |        0.00 |  20555.20 | 20555.20 |           0 | EMITIDA   |          6 |           2
+          5 | F-000005 | Sofía Ramírez Sánchez                         | RAMS880115KL5 | Ana Torres Vega | 2026-11-19 23:54:55.060135 | 2026-11-19 23:54:55.060135 |   2400.00 |    384.00 |        0.00 |   2784.00 |  2784.00 |           0 | EMITIDA   |         11 |           2
+          6 | F-000006 | Hospital San Rafael SC                        | HOS210330CD6  | Ana Torres Vega |                            |                            |  22000.00 |   3520.00 |        0.00 |  25520.00 | 25520.00 |           0 | BORRADOR  |         10 |           2
 (6 filas)
 
            nombre_categoria            | facturas | venta_neta | impuestos 
@@ -166,30 +166,30 @@ CALL
  Efectivo           |     0 |        0
 (5 filas)
 
- codigo_servicio |           nombre_servicio           |    nombre_categoria    | precio_base | unidad_medida | estado | num_caracteristicas 
------------------+-------------------------------------+------------------------+-------------+---------------+--------+---------------------
- SRV-001         | Desarrollo de sitio web corporativo | Desarrollo de Software |    35000.00 | Servicio      | t      |                  13
- SRV-002         | Desarrollo de tienda en línea       | Desarrollo de Software |    68000.00 | Servicio      | t      |                  13
- SRV-003         | Aplicación móvil Android/iOS        | Desarrollo de Software |   120000.00 | Servicio      | t      |                  13
- SRV-004         | Sistema web a la medida             | Desarrollo de Software |    95000.00 | Servicio      | t      |                  13
- SRV-005         | API REST de integración             | Desarrollo de Software |    42000.00 | Servicio      | t      |                  13
+ codigo_servicio |           nombre_servicio           |    nombre_categoria    | precio_base | unidad_medida | estado | num_caracteristicas | id_servicio | id_categoria |                                    descripcion                                     
+-----------------+-------------------------------------+------------------------+-------------+---------------+--------+---------------------+-------------+--------------+------------------------------------------------------------------------------------
+ SRV-001         | Desarrollo de sitio web corporativo | Desarrollo de Software |    35000.00 | Servicio      | t      |                  13 |           1 |            1 | Desarrollo de sitio web corporativo. Construcción y mantenimiento de aplicaciones.
+ SRV-002         | Desarrollo de tienda en línea       | Desarrollo de Software |    68000.00 | Servicio      | t      |                  13 |           2 |            1 | Desarrollo de tienda en línea. Construcción y mantenimiento de aplicaciones.
+ SRV-003         | Aplicación móvil Android/iOS        | Desarrollo de Software |   120000.00 | Servicio      | t      |                  13 |           3 |            1 | Aplicación móvil Android/iOS. Construcción y mantenimiento de aplicaciones.
+ SRV-004         | Sistema web a la medida             | Desarrollo de Software |    95000.00 | Servicio      | t      |                  13 |           4 |            1 | Sistema web a la medida. Construcción y mantenimiento de aplicaciones.
+ SRV-005         | API REST de integración             | Desarrollo de Software |    42000.00 | Servicio      | t      |                  13 |           5 |            1 | API REST de integración. Construcción y mantenimiento de aplicaciones.
 (5 filas)
 
- codigo_servicio |            nombre_servicio            |   nombre_caracteristica    |   valor    | unidad  
------------------+---------------------------------------+----------------------------+------------+---------
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Modalidad                  | Remoto     | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Tipo de cobro              | Mensual    | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Tiempo de entrega          | 1          | días
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Garantía                   | 0          | días
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Requiere contrato          | SI         | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Nivel de servicio (SLA)    | Estándar   | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Horario de atención        | 12x6       | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Vigencia de la tarifa      | 2027-06-30 | 
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Almacenamiento             | 80         | GB
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Memoria RAM                | 4          | GB
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Núcleos vCPU               | 2          | núcleos
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Transferencia mensual      | 2000       | GB
- SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Disponibilidad garantizada | 99.9       | %
+ codigo_servicio |            nombre_servicio            |   nombre_caracteristica    |   valor    | unidad  | id_servicio | id_caracteristica | tipo_dato 
+-----------------+---------------------------------------+----------------------------+------------+---------+-------------+-------------------+-----------
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Modalidad                  | Remoto     |         |          13 |                 1 | TEXTO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Tipo de cobro              | Mensual    |         |          13 |                 2 | TEXTO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Tiempo de entrega          | 1          | días    |          13 |                 3 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Garantía                   | 0          | días    |          13 |                 4 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Requiere contrato          | SI         |         |          13 |                 5 | BOOLEANO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Nivel de servicio (SLA)    | Estándar   |         |          13 |                 6 | TEXTO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Horario de atención        | 12x6       |         |          13 |                 7 | TEXTO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Vigencia de la tarifa      | 2027-06-30 |         |          13 |                 8 | FECHA
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Almacenamiento             | 80         | GB      |          13 |                14 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Memoria RAM                | 4          | GB      |          13 |                15 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Núcleos vCPU               | 2          | núcleos |          13 |                16 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Transferencia mensual      | 2000       | GB      |          13 |                17 | ENTERO
+ SRV-013         | Servidor virtual privado (VPS) 2 vCPU | Disponibilidad garantizada | 99.9       | %       |          13 |                18 | DECIMAL
 (13 filas)
 
  id_cliente |                  cliente                  |      rfc      | facturas | por_vencer | dias_1_30 | dias_31_60 | dias_61_90 | mas_de_90 | saldo_total 

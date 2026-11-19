@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+<div class="login tarjeta">
+  <h1>Facturación de servicios</h1>
+  <p class="sub">Equipo 3 · Bases de Datos en la Nube</p>
+  <form method="post" action="{{ url_for('web.login') }}" class="apilado" autocomplete="on">
+    <input type="hidden" name="siguiente" value="{{ siguiente }}">
+    <label>Usuario
+      <input name="usuario" value="{{ usuario or '' }}" required minlength="3" maxlength="50" autocomplete="username" autofocus>
+    </label>
+    <label>Contraseña
+      <input name="contrasena" type="password" required maxlength="128" autocomplete="current-password">
+    </label>
+    <button type="submit">Entrar</button>
+  </form>
+  <p class="demo">Cuentas de demostración: <code>laura.mendez</code> (Gerente), <code>ana.torres</code> (Facturista),
+    <code>carlos.ruiz</code> (Cajero), <code>diego.salas</code> (Auxiliar). Contraseña: <code>Demo2026!</code></p>
+</div>
+{% endblock %}
