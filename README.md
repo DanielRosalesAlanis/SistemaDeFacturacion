@@ -2,6 +2,10 @@
 
 Optativa I · Bases de Datos en la Nube · Proyecto C · AWS Academy Learner Lab
 
+**Integrantes:** Dana Bahena Díaz, Isaac Leonardo López Flores, Renata Lizbeth Ortiz Chávez, Daniel Rosales Alanis
+
+- **Parte 1 · Base de datos** — Isaac Leonardo López Flores (20243ds017@utez.edu.mx): `database/*.sql`, `database/resultado_pruebas.txt`, `scripts/cargar_bd.*`, `scripts/cambiar_contrasenas_demo.py`
+
 Aplicación web en **Flask (Python)** sobre **Amazon RDS for PostgreSQL**. La aplicación incluye el frontend con plantillas Jinja y una API REST con JWT. Las reglas de negocio (RN-01 a RN-33) viven en procedimientos almacenados: la aplicación escribe sólo con `CALL facturacion.sp_*` y lee de las vistas `facturacion.vw_*`.
 
 | Elemento | Cantidad |
