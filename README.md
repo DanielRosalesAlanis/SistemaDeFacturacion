@@ -141,7 +141,7 @@ Corren contra la base de `.env`, dentro de una transacción que se revierte al t
 
 ## Despliegue en AWS (arquitectura objetivo)
 
-API Gateway (HTTP API) → Lambda (Python 3.12, 256 MB, rol `LabRole`, handler `lambda_handler.handler`) → RDS, con DynamoDB para la bitácora.
+API Gateway (HTTP API) → Lambda (Python 3.12, 256 MB, rol `LabRole`, handler `lambda_handler.handler`) → RDS, con DynamoDB para la bitácora. Guía paso a paso en la consola: [`docs/DESPLIEGUE_AWS.md`](docs/DESPLIEGUE_AWS.md). Paquete: `python scripts/empaquetar_lambda.py`.
 
 1. Empaqueta `src/`, las dependencias de `requirements.txt` para Linux y `certs/global-bundle.pem`.
 2. Define en la función las variables de `.env.example`, con `COOKIE_SEGURA=true`.
