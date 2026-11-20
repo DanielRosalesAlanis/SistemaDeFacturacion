@@ -4,6 +4,8 @@ from decimal import Decimal
 
 import jwt as pyjwt
 
+from conftest import CONTRASENA_DEMO
+
 
 def test_salud(cliente):
     r = cliente.get("/api/salud")
@@ -12,7 +14,7 @@ def test_salud(cliente):
 
 # --- Autenticación ---------------------------------------------------------------
 def test_login_correcto_devuelve_jwt(cliente):
-    r = cliente.post("/api/auth/login", json={"usuario": "ana.torres", "contrasena": "Demo2026!"})
+    r = cliente.post("/api/auth/login", json={"usuario": "ana.torres", "contrasena": CONTRASENA_DEMO})
     assert r.status_code == 200
     assert r.json["tipo"] == "Bearer" and r.json["usuario"]["rol"] == "Facturista"
     yo = cliente.get("/api/auth/yo", headers={"Authorization": f"Bearer {r.json['token']}"})
@@ -31,7 +33,7 @@ def test_bloqueo_al_quinto_intento(cliente):
         assert cliente.post("/api/auth/login", json={"usuario": "diego.salas", "contrasena": "mala-123"}).status_code == 401
     quinto = cliente.post("/api/auth/login", json={"usuario": "diego.salas", "contrasena": "mala-123"})
     assert quinto.status_code == 423
-    correcta = cliente.post("/api/auth/login", json={"usuario": "diego.salas", "contrasena": "Demo2026!"})
+    correcta = cliente.post("/api/auth/login", json={"usuario": "diego.salas", "contrasena": CONTRASENA_DEMO})
     assert correcta.status_code == 423 and "RN-33" in correcta.json["error"]
 
 
@@ -138,7 +140,8 @@ def test_inyeccion_sql_no_tiene_efecto(cliente, token, conexion):
     r = cliente.get("/api/servicios", query_string={"q": "' OR 1=1; DROP TABLE facturacion.pagos; --"}, headers=aux)
     assert r.status_code == 200 and r.json == []
     assert cliente.get("/api/servicios/SRV-001'%20OR%20'1'='1/ficha", headers=aux).status_code == 404
-    assert cliente.post("/api/auth/login", json={"usuario": "' OR '1'='1", "contrasena": "' OR '1'='1"}).status_code == 401
+    # 400: el usuario sólo admite letras, números, punto, guion y guion bajo; ni llega a la base
+    assert cliente.post("/api/auth/login", json={"usuario": "' OR '1'='1", "contrasena": "' OR '1'='1"}).status_code == 400
     assert conexion.execute("SELECT count(*) FROM facturacion.pagos").fetchone()[0] == 4
 
 

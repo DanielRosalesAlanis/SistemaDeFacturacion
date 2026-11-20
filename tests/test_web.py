@@ -1,6 +1,8 @@
 """Pruebas de la interfaz web: sesión, CSRF, XSS, permisos y que cada página cargue."""
 import re
 
+from conftest import CONTRASENA_DEMO
+
 
 def csrf_de(html: bytes) -> str:
     return re.search(rb'name="csrf" value="([0-9a-f]+)"', html).group(1).decode()
@@ -12,7 +14,7 @@ def test_sin_sesion_redirige_al_login(cliente):
 
 
 def test_cookie_de_sesion_httponly_y_samesite(cliente):
-    r = cliente.post("/login", data={"usuario": "ana.torres", "contrasena": "Demo2026!"})
+    r = cliente.post("/login", data={"usuario": "ana.torres", "contrasena": CONTRASENA_DEMO})
     cookie = r.headers["Set-Cookie"]
     assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
 
@@ -23,7 +25,7 @@ def test_login_incorrecto_muestra_error(cliente):
 
 
 def test_redireccion_abierta_bloqueada(cliente):
-    r = cliente.post("/login", data={"usuario": "ana.torres", "contrasena": "Demo2026!", "siguiente": "//sitio-malicioso.com"})
+    r = cliente.post("/login", data={"usuario": "ana.torres", "contrasena": CONTRASENA_DEMO, "siguiente": "//sitio-malicioso.com"})
     assert r.headers["Location"] == "/"
 
 
@@ -82,3 +84,39 @@ def test_xss_se_escapa(sesion_web):
                               "correo": "xss@prueba.mx", "direccion": "CP 01000"})
     pagina = c.get("/clientes").data.decode()
     assert "&lt;script&gt;alert(" in pagina and "<script>alert(" not in pagina
+
+
+def test_cerrar_sesion_vencida_no_termina_en_405(cliente):
+    # Pestaña vieja: la cookie ya no sirve y se pulsa «Cerrar sesión»
+    cliente.set_cookie("sesion", "token-vencido")
+    r = cliente.post("/logout", data={"csrf": "x"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/login")    # sin ?siguiente=/logout
+    r = cliente.post("/login", data={"usuario": "ana.torres", "contrasena": CONTRASENA_DEMO,
+                                     "siguiente": "/logout"})
+    assert r.headers["Location"] == "/"
+
+
+def test_logout_por_get_no_da_405_ni_cierra_la_sesion(sesion_web):
+    c = sesion_web("ana.torres")
+    r = c.get("/logout")
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+    assert c.get("/").status_code == 200                     # la sesión sigue abierta
+
+
+def test_cambiar_precio_desde_la_ficha_queda_auditado(sesion_web, conexion):
+    # El formulario de la ficha manda el campo oculto volver_a; no debe rechazarse
+    c = sesion_web("ana.torres")
+    token = csrf_de(c.get("/catalogo/SRV-013").data)
+    id_servicio = conexion.execute("SELECT id_servicio FROM facturacion.servicios WHERE codigo_servicio = 'SRV-013'").fetchone()[0]
+    r = c.post(f"/catalogo/{id_servicio}/precio", data={"csrf": token, "volver_a": "/catalogo/SRV-013", "precio": "975.50"},
+               follow_redirects=True)
+    assert "Precio actualizado" in r.data.decode() and "inválidos" not in r.data.decode()
+    assert conexion.execute("SELECT precio_base FROM facturacion.servicios WHERE id_servicio = %s", [id_servicio]).fetchone()[0] == 975.50
+    assert conexion.execute("SELECT count(*) FROM facturacion.vw_auditoria_tarifas WHERE codigo_servicio = 'SRV-013'").fetchone()[0] >= 1
+
+
+def test_logout_con_csrf_cierra_la_sesion(sesion_web):
+    c = sesion_web("ana.torres")
+    token = csrf_de(c.get("/").data)
+    assert c.post("/logout", data={"csrf": token}).headers["Location"].endswith("/login")
+    assert c.get("/").status_code == 302

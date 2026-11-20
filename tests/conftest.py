@@ -1,5 +1,6 @@
 """Las pruebas usan la base real (la de .env) dentro de una transacción que
 se revierte al final de cada prueba: no dejan datos."""
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,10 @@ CUENTAS = {  # usuario: (id_usuario, id_empleado, rol, nombre)
     "carlos.ruiz": (3, 3, "Cajero", "Carlos Ruiz Pineda"),
     "diego.salas": (4, 4, "Auxiliar", "Diego Salas Ortega"),
 }
-CONTRASENA_DEMO = "Demo2026!"
+# En RDS las cuentas de demo tienen otra contraseña (scripts/cambiar_contrasenas_demo.py);
+# va en CONTRASENA_DEMO de .env. Demo2026! sólo sirve en una base recién cargada.
+cargar_entorno()
+CONTRASENA_DEMO = os.environ.get("CONTRASENA_DEMO") or "Demo2026!"
 
 
 @pytest.fixture(scope="session")
