@@ -43,6 +43,10 @@ def create_app(extra: dict | None = None) -> Flask:
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict",
                       SESSION_COOKIE_SECURE=app.config["COOKIE_SEGURA"])
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # En Lambda el runtime ya instaló su handler en el logger raíz, así que
+    # basicConfig no hace nada y el nivel queda en WARNING: sin esta línea
+    # los log.info no llegan a CloudWatch.
+    logging.getLogger().setLevel(logging.INFO)
 
     from .api import api
     from .web import web
