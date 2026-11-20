@@ -63,6 +63,8 @@ Aplicación web en **Flask (Python)** sobre **Amazon RDS for PostgreSQL**. La ap
    ```
 2. Copia `.env.example` como `.env` y llena `PGPASSWORD` y `JWT_SECRETO`. Para generar el secreto: `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
    - En desarrollo local por http usa `COOKIE_SEGURA=false`.
+   - `MOSTRAR_CUENTAS_DEMO=true` muestra los usuarios de demostración en el login (sólo local; nunca en Lambda).
+   - `CONTRASENA_DEMO` es la contraseña de las cuentas de demostración en la base de `.env`; la usan las pruebas.
    - **`.env` nunca se sube a git.** Si el Learner Lab cambia el endpoint de RDS, sólo se actualiza `PGHOST`.
 3. Instala las dependencias:
    ```bash
@@ -86,13 +88,21 @@ scripts/cargar_bd.sh [--env .env] [--forzar] [--respaldo] [--solo-pruebas]   # m
 
 > ⚠️ `01_esquema.sql` empieza con `DROP SCHEMA IF EXISTS facturacion CASCADE`. El script de despliegue se detiene si el esquema ya existe, salvo que se use `-Forzar`.
 
+Después de cargar la base en RDS (conectado como `postgres`):
+
+```bash
+psql -X -f database/05_usuario_aplicacion.sql              # usuario app_facturacion con mínimo privilegio
+psql -X -c "\password app_facturacion"                     # su contraseña va sólo en la Lambda
+python scripts/cambiar_contrasenas_demo.py                 # contraseña nueva para las 4 cuentas de demo
+```
+
 ## Ejecutar la aplicación
 
 ```bash
 flask --app src/wsgi.py run          # http://127.0.0.1:5000
 ```
 
-Cuentas de demostración (contraseña `Demo2026!`, **sólo para la demo**):
+Cuentas de demostración. En una base recién cargada la contraseña es `Demo2026!`; **en RDS se cambió** con `scripts/cambiar_contrasenas_demo.py` y no se guarda en el repositorio:
 
 | Usuario | Rol | Puede |
 | --- | --- | --- |
@@ -107,7 +117,7 @@ Cuentas de demostración (contraseña `Demo2026!`, **sólo para la demo**):
 
 ```bash
 curl -X POST http://127.0.0.1:5000/api/auth/login -H "Content-Type: application/json" \
-     -d '{"usuario": "ana.torres", "contrasena": "Demo2026!"}'
+     -d '{"usuario": "ana.torres", "contrasena": "<contraseña>"}'
 curl http://127.0.0.1:5000/api/facturas -H "Authorization: Bearer <token>"
 ```
 
@@ -123,6 +133,9 @@ Corren contra la base de `.env`, dentro de una transacción que se revierte al t
 - JWT alterado, vencido o firmado con otra clave.
 - Bloqueo tras 5 intentos fallidos.
 - Inyección SQL, XSS, CSRF y redirección abierta.
+- Escalada de rol por URL y por API, y tokens falsificados (otra clave o `alg: none`).
+- Revocación: una cuenta desactivada o con otro rol pierde su sesión al instante.
+- Validación de RFC, correo, teléfono y caracteres de control.
 - Que cada página cargue.
 
 ## Seguridad (rubro 4 de la rúbrica)
@@ -135,6 +148,10 @@ Corren contra la base de `.env`, dentro de una transacción que se revierte al t
 | Autenticación | JWT HS256 de 60 minutos. En la web va en una cookie `HttpOnly`; en la API, como `Bearer` |
 | Contraseñas | bcrypt (costo 12) en la aplicación; la base rechaza cualquier valor que no sea un hash (RN-32); bloqueo tras 5 intentos (RN-33) |
 | Control de acceso | Rol validado en cada endpoint y otra vez dentro de cada SP con `fn_empleado_puede`. El empleado sale del token, nunca de la petición |
+| Sesiones | En cada petición se confirma en la base que la cuenta siga activa y con el mismo rol del token |
+| Mínimo privilegio en la base | La Lambda entra como `app_facturacion`: sólo ejecuta los SP expuestos y lee vistas (`database/05_usuario_aplicacion.sql`) |
+| Validación de entradas | pydantic: tipos, longitudes, RFC, correo, teléfono; sin caracteres de control |
+| Respuestas | `/api/salud` y los errores 500 no revelan la base ni el motor; el detalle va a CloudWatch |
 | Secretos | Sólo en `.env` o en las variables de la función Lambda; nada en el código ni en git |
 | Otras cabeceras | `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Cache-Control: no-store` y HSTS con https |
 | Bitácora | Eventos inmutables en DynamoDB (`database/dynamodb/`) |

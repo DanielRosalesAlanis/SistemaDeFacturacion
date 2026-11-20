@@ -37,6 +37,7 @@ paths:
       security: []
       responses:
         '200': {description: OK, content: {application/json: {example: {estado: ok, base_de_datos: conectada}}}}
+        '503': {description: Sin esquema o sin conexión (el detalle sólo va al log), content: {application/json: {example: {estado: error, base_de_datos: no disponible}}}}
   /api/auth/login:
     post:
       tags: [Sesión]
@@ -48,7 +49,7 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/Login'}
-            example: {usuario: ana.torres, contrasena: Demo2026!}
+            example: {usuario: ana.torres, contrasena: '<contraseña>'}
       responses:
         '200':
           description: Token emitido
