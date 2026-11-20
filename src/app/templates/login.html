@@ -14,7 +14,10 @@
     </label>
     <button type="submit">Entrar</button>
   </form>
+  {# Sólo en desarrollo local (MOSTRAR_CUENTAS_DEMO=true); nunca en el sitio desplegado #}
+  {% if config.MOSTRAR_CUENTAS_DEMO %}
   <p class="demo">Cuentas de demostración: <code>laura.mendez</code> (Gerente), <code>ana.torres</code> (Facturista),
-    <code>carlos.ruiz</code> (Cajero), <code>diego.salas</code> (Auxiliar). Contraseña: <code>Demo2026!</code></p>
+    <code>carlos.ruiz</code> (Cajero), <code>diego.salas</code> (Auxiliar). La contraseña está en el README.</p>
+  {% endif %}
 </div>
 {% endblock %}
