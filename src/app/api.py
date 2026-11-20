@@ -50,8 +50,14 @@ def _error_validacion(e: ValidationError):
 # --- Salud y sesión ---------------------------------------------------------------
 @api.get("/salud")
 def salud():
-    db.ejecutar_lectura("SELECT 1 AS ok", uno=True)
-    return jsonify(estado="ok", base_de_datos="conectada")
+    r = db.ejecutar_lectura("""SELECT current_database() AS base,
+                                      to_regnamespace('facturacion') IS NOT NULL AS esquema,
+                                      (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                                        WHERE n.nspname = 'facturacion' AND p.prokind = 'p') AS procedimientos""", uno=True)
+    if not r["esquema"]:
+        return jsonify(estado="error", base_de_datos=r["base"],
+                       error=f"La base '{r['base']}' no tiene el esquema facturacion: revisa PGDATABASE (debe ser billing)"), 503
+    return jsonify(estado="ok", base_de_datos="conectada", base=r["base"], procedimientos=r["procedimientos"])
 
 
 @api.post("/auth/login")

@@ -86,6 +86,10 @@ def _obtener_pool() -> ConnectionPool:
                 name="facturacion",
                 open=True,
                 timeout=15,
+                # Lambda congela la función entre peticiones y la conexión puede
+                # quedar cortada: se verifica cada una antes de entregarla.
+                check=ConnectionPool.check_connection,
+                max_idle=300,
             )
     return _pool
 
@@ -119,8 +123,13 @@ def traducir(e: Exception) -> ErrorNegocio:
         return ErrorNegocio("Los datos no cumplen las restricciones de la base", 422)
     if isinstance(e, pgerr.DataError):
         return ErrorNegocio("Dato con formato o tamaño inválido", 400)
-    log.exception("Error de base de datos no previsto")
-    return ErrorNegocio("Error interno de la base de datos", 500)
+    if isinstance(e, pgerr.OperationalError):
+        log.warning("Conexión con la base perdida: %s", e)
+        return ErrorNegocio("Se perdió la conexión con la base de datos; intenta de nuevo", 503)
+    codigo = getattr(e, "sqlstate", None) or "desconocido"
+    log.exception("Error de base de datos no previsto (SQLSTATE %s)", codigo)
+    # El SQLSTATE no expone datos y permite diagnosticar (p. ej. 42883 = función inexistente)
+    return ErrorNegocio(f"Error interno de la base de datos (código {codigo})", 500)
 
 
 def llamar(nombre: str, *args) -> dict:
