@@ -125,7 +125,7 @@ flowchart LR
     end
     subgraph AWS["AWS · us-east-1 (AWS Academy Learner Lab)"]
         subgraph VPC["VPC vpc-08c8747b2dfc49016"]
-            subgraph SG["Security group secg-db-laboratory<br/>5432 sólo desde la IP del equipo"]
+            subgraph SG["Security group secg-db-facturacion<br/>5432 sólo desde secg-lambda-facturacion y la IP del equipo"]
                 RDS[("Amazon RDS · db-billing-postgres<br/>PostgreSQL 18.3 · db.t3.micro · 20 GiB gp2<br/>base billing · esquema facturacion<br/>20 tablas · 21 SP · 11 funciones · 21 vistas")]
             end
         end
@@ -684,7 +684,7 @@ flowchart LR
 
 ### 9.1 Aplicación web (Flask)
 
-- **Ejecutar:** `flask --app src/wsgi.py run` y abrir http://127.0.0.1:5000. Cada integrante entra con su cuenta de demostración (contraseña `Demo2026!`).
+- **Ejecutar:** `flask --app src/wsgi.py run` y abrir http://127.0.0.1:5000. Cada integrante entra con su cuenta de demostración (en RDS la contraseña se cambió y no está en el repositorio).
 - **Conexión:** usa la base real en RDS. Lo que se haga en la demo queda guardado; para volver al estado inicial se ejecuta `.\scripts\cargar_bd.ps1 -Forzar`.
 - **Permisos:** el menú y los botones cambian según el rol, y la base vuelve a validar cada permiso.
 - **Prototipo original:** el prototipo estático de 4 pantallas se conserva como referencia de diseño en `docs/prototipo/` (https://claude.ai/artifact/9KhSHdPbUj8YcJgtcBZ5Rh).

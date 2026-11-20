@@ -25,8 +25,10 @@
 | --- | --- |
 | Instancia RDS | `db-billing-postgres` |
 | Endpoint RDS | `db-billing-postgres.c7aen0lsxvo7.us-east-1.rds.amazonaws.com` |
+| Security group de la Lambda | `secg-lambda-facturacion` |
+| Usuario de base de la Lambda | `app_facturacion` (paso 6b) |
 | VPC de RDS | `vpc-08c8747b2dfc49016` |
-| Security group de RDS | `secg-db-laboratory` (`sg-07846336ac6ab7724`) |
+| Security group de RDS | `secg-db-facturacion` |
 | Paquete de la función | `C:\Users\danro\SistemaDeFacturacion\build\facturacion_lambda.zip` (8.5 MB) |
 | Variables de la función | `C:\Users\danro\SistemaDeFacturacion\build\variables_lambda.txt` (lo abre el usuario) |
 
@@ -43,7 +45,7 @@
 1. RDS → Databases → `db-billing-postgres` → pestaña **Connectivity & security**.
 2. Anota la **VPC** (debe ser `vpc-08c8747b2dfc49016`) y la lista de **Subnets**.
 3. Ve a VPC → **Subnets** y filtra por esa VPC. Para cada subred del paso anterior, anota su **Availability Zone** y su **Route table**.
-4. Revisa si `secg-db-laboratory` está asignado a otras instancias (EC2 → Security Groups → `sg-07846336ac6ab7724`) y repórtalo al usuario. Sólo se agregará una regla del puerto 5432, que no afecta a MySQL (3306).
+4. Revisa si `secg-db-facturacion` está asignado a otras instancias (EC2 → Security Groups → `secg-db-facturacion`) y repórtalo al usuario. Sólo se agregará una regla del puerto 5432, que no afecta a MySQL (3306).
 
 ## 3. Crear la tabla de DynamoDB
 
@@ -72,7 +74,7 @@ EC2 → Security Groups → **Create security group**:
 
 | Campo | Valor |
 | --- | --- |
-| Name | `sg-lambda-facturacion` |
+| Name | `secg-lambda-facturacion` |
 | Description | `Lambda facturacion-app hacia RDS` |
 | VPC | `vpc-08c8747b2dfc49016` |
 | Inbound rules | **ninguna** |
@@ -82,11 +84,11 @@ Anota el ID (`sg-...`).
 
 ## 5. Permitir que la Lambda llegue a RDS
 
-EC2 → Security Groups → `secg-db-laboratory` (`sg-07846336ac6ab7724`) → **Edit inbound rules** → **Add rule**:
+EC2 → Security Groups → `secg-db-facturacion` → **Edit inbound rules** → **Add rule**:
 
 | Type | Port | Source | Description |
 | --- | --- | --- | --- |
-| PostgreSQL | 5432 | Custom → **`sg-lambda-facturacion`** (el security group del paso 4, no una IP) | `Lambda facturacion-app` |
+| PostgreSQL | 5432 | Custom → **`secg-lambda-facturacion`** (el security group del paso 4, no una IP) | `Lambda facturacion-app` |
 
 **No borres ni cambies** la regla que ya existe para la IP del usuario. Guarda.
 
@@ -106,6 +108,19 @@ VPC → **Endpoints** → **Create endpoint**:
 | Policy | Full access |
 
 Crea y anota el ID (`vpce-...`).
+
+## 6b. Usuario de base de datos para la aplicación (mínimo privilegio)
+
+La Lambda **no** se conecta como `postgres` (el usuario maestro). Usa `app_facturacion`, que sólo puede ejecutar los procedimientos que llama la API y leer las vistas `vw_*`; no puede leer ni modificar tablas directamente.
+
+Lo crea el usuario en su computadora, conectado como `postgres` (Git Bash, con las variables de `.env` cargadas):
+
+```bash
+psql -X -f database/05_usuario_aplicacion.sql          # al final muestra:  f | t | t
+winpty psql -X -c "\password app_facturacion"          # pide la contraseña; sólo envía el hash
+```
+
+Esa contraseña va **sólo** en `PGPASSWORD` de la Lambda (paso 7); el `.env` local sigue con `postgres`. Si se vuelve a cargar `02_procedimientos.sql`, hay que repetir el primer comando.
 
 ## 7. Crear la función Lambda
 
@@ -130,8 +145,8 @@ Después de crearla:
    | `PGHOST` | `db-billing-postgres.c7aen0lsxvo7.us-east-1.rds.amazonaws.com` |
    | `PGPORT` | `5432` |
    | `PGDATABASE` | `billing` |
-   | `PGUSER` | `postgres` |
-   | `PGPASSWORD` | **⛔ detente: que la escriba el usuario** |
+   | `PGUSER` | `app_facturacion` (paso 6b; nunca `postgres`) |
+   | `PGPASSWORD` | **⛔ detente: que la escriba el usuario** (la de `app_facturacion`) |
    | `PGSSLMODE` | `verify-full` |
    | `PGSSLROOTCERT` | `/var/task/certs/global-bundle.pem` |
    | `JWT_SECRETO` | **⛔ detente: que el usuario lo pegue desde `build\variables_lambda.txt`** |
@@ -139,11 +154,11 @@ Después de crearla:
    | `COOKIE_SEGURA` | `true` |
    | `DDB_TABLA_EVENTOS` | `facturacion-eventos` |
 
-   No agregues `AWS_REGION`: Lambda la define sola y rechaza esa clave. Guarda.
+   No agregues `AWS_REGION`: Lambda la define sola y rechaza esa clave. **No agregues `MOSTRAR_CUENTAS_DEMO`** (mostraría las cuentas de demostración en el login). Guarda.
 5. **Configuration → VPC → Edit**:
    - VPC: `vpc-08c8747b2dfc49016`.
    - Subnets: las subredes de RDS anotadas en el paso 2, al menos 2 en zonas distintas.
-   - Security groups: **sólo** `sg-lambda-facturacion` (quita el `default` si aparece).
+   - Security groups: **sólo** `secg-lambda-facturacion` (quita el `default` si aparece).
    - Guarda. Tarda 1 o 2 minutos; espera a que el estado diga *Successful*.
 6. **Test** → crea un evento llamado `salud` con este JSON y ejecútalo:
 
@@ -193,7 +208,7 @@ Usa el Invoke URL del paso 8 (sin `/` final) como `<URL>`:
 
 1. Abre `<URL>/api/salud` → debe mostrar `{"base_de_datos":"conectada","estado":"ok"}`.
 2. Abre `<URL>/login` → debe aparecer la página «Facturación de servicios».
-3. Inicia sesión con usuario **`ana.torres`** y contraseña **`Demo2026!`** (cuenta de demostración pública). Debe aparecer el **Panel** con «Por cobrar» en **$105,449.20**.
+3. La página de login **no** debe mostrar usuarios ni contraseñas. Pide al usuario que inicie sesión como **`ana.torres`** (la contraseña de las cuentas de demostración en RDS no está en el repositorio; se cambió con `scripts/cambiar_contrasenas_demo.py`). Debe aparecer el **Panel** con «Por cobrar» en **$105,449.20**.
 4. Ve a **Facturas** → abre **F-000002** → debe mostrar conceptos, pagos, pólizas y el comprobante CFDI.
 5. Cierra sesión con **Salir**.
 6. DynamoDB → Tables → `facturacion-eventos` → **Explore table items** → deben aparecer eventos `LOGIN_OK` con `entidad` = `USUARIO#2`.
@@ -214,8 +229,8 @@ Entrega esta tabla llena:
 | --- | --- |
 | Invoke URL de la aplicación | |
 | ARN de la función `facturacion-app` | |
-| ID de `sg-lambda-facturacion` | |
-| Regla agregada en `secg-db-laboratory` | sí / no |
+| ID de `secg-lambda-facturacion` | |
+| Regla agregada en `secg-db-facturacion` | sí / no |
 | ID del endpoint `vpce-dynamodb-facturacion` | |
 | ARN de la tabla `facturacion-eventos` | |
 | `<URL>/api/salud` respondió conectada | sí / no |
@@ -231,4 +246,4 @@ Entrega esta tabla llena:
 - **Costos:** Lambda, API Gateway y DynamoDB On-Demand casi no cuestan sin uso, y el endpoint Gateway de DynamoDB es gratis. Lo que consume crédito es **RDS**: detenlo al terminar cada sesión (*Actions → Stop temporarily*). Mientras esté detenido, la app responderá con error.
 - **Actualizar el código:** ejecuta `python scripts/empaquetar_lambda.py` y sube el nuevo `build/facturacion_lambda.zip` en *Code → Upload from*.
 - **Si el Learner Lab cambia el endpoint de RDS:** sólo se actualiza `PGHOST` en las variables de la función.
-- **Seguridad:** RDS sólo acepta conexiones de la IP del equipo y de las Lambdas con `sg-lambda-facturacion`. La app usa HTTPS (API Gateway), cookies `Secure` y JWT.
+- **Seguridad:** RDS sólo acepta conexiones de la IP del equipo y de las Lambdas con `secg-lambda-facturacion`. La app usa HTTPS (API Gateway), cookies `Secure` y JWT.
