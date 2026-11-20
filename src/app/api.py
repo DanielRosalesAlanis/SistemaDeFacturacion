@@ -3,6 +3,7 @@ Códigos: 200/201 éxito · 400 datos inválidos · 401 sin token o token invál
 403 rol sin permiso · 404 no existe · 409 duplicado · 422 regla de negocio
 (RN-xx) · 423 cuenta bloqueada · 500 error interno.
 Especificación: docs/openapi.yaml"""
+import logging
 from datetime import date
 
 from flask import Blueprint, g, jsonify, request
@@ -15,6 +16,7 @@ from .esquemas import (AsignacionMasiva, Cierre, ClienteNuevo, Concepto, Emision
                        UsuarioNuevo, ValorCaracteristica, errores_legibles)
 from .seguridad import api_requiere
 
+log = logging.getLogger(__name__)
 api = Blueprint("api", __name__, url_prefix="/api")
 TODOS = ()
 FACTURAR, COBRAR, GERENTE = op.FACTURAR, op.COBRAR, op.GERENTE
@@ -50,14 +52,17 @@ def _error_validacion(e: ValidationError):
 # --- Salud y sesión ---------------------------------------------------------------
 @api.get("/salud")
 def salud():
+    """Pública: sólo dice si hay servicio. El diagnóstico va al log (CloudWatch),
+    nunca en la respuesta (nombre de la base, procedimientos, variables)."""
     r = db.ejecutar_lectura("""SELECT current_database() AS base,
                                       to_regnamespace('facturacion') IS NOT NULL AS esquema,
                                       (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                                         WHERE n.nspname = 'facturacion' AND p.prokind = 'p') AS procedimientos""", uno=True)
     if not r["esquema"]:
-        return jsonify(estado="error", base_de_datos=r["base"],
-                       error=f"La base '{r['base']}' no tiene el esquema facturacion: revisa PGDATABASE (debe ser billing)"), 503
-    return jsonify(estado="ok", base_de_datos="conectada", base=r["base"], procedimientos=r["procedimientos"])
+        log.error("La base '%s' no tiene el esquema facturacion: revisa PGDATABASE (debe ser billing)", r["base"])
+        return jsonify(estado="error", base_de_datos="no disponible"), 503
+    log.info("Salud: base %s, %s procedimientos", r["base"], r["procedimientos"])
+    return jsonify(estado="ok", base_de_datos="conectada")
 
 
 @api.post("/auth/login")
@@ -104,7 +109,8 @@ def asignar_caracteristica(id_servicio, id_caracteristica):
 @api.post("/servicios/caracteristicas/masivo")
 @api_requiere(*GERENTE)
 def asignacion_masiva():
-    return jsonify(servicios_afectados=op.asignacion_masiva(g.identidad, entrada(AsignacionMasiva).asignaciones))
+    datos = entrada(AsignacionMasiva)
+    return jsonify(servicios_afectados=op.asignacion_masiva(g.identidad, datos.como_json()))
 
 
 @api.patch("/servicios/<int:id_servicio>/precio")

@@ -81,6 +81,17 @@ def leer_token(token: str) -> Identidad:
     return Identidad(int(d["sub"]), int(d["emp"]), d["rol"], d.get("nombre", ""), d.get("usr", ""), d["jti"])
 
 
+def sigue_vigente(ident: Identidad) -> bool:
+    """El JWT es válido JWT_MINUTOS aunque la cuenta cambie. En cada petición
+    se confirma en la base que siga activa y con el mismo rol: desactivar
+    una cuenta o cambiarle el rol cierra sus sesiones al instante."""
+    from . import db                          # import local: db no depende de este módulo
+    c = db.ejecutar_lectura(
+        "SELECT id_usuario, rol, activo FROM facturacion.fn_credenciales_usuario(%s)",
+        [ident.usuario], uno=True)
+    return bool(c) and c["activo"] and c["id_usuario"] == ident.id_usuario and c["rol"] == ident.rol
+
+
 def token_csrf(ident: Identidad) -> str:
     return hmac.new(current_app.config["JWT_SECRETO"].encode(), ident.jti.encode(), hashlib.sha256).hexdigest()
 
@@ -100,6 +111,8 @@ def api_requiere(*roles: str):
                 return jsonify(error="El token expiró; inicia sesión de nuevo"), 401
             except jwt.InvalidTokenError:
                 return jsonify(error="Token inválido"), 401
+            if not sigue_vigente(g.identidad):
+                return jsonify(error="La cuenta cambió o fue desactivada; inicia sesión de nuevo"), 401
             if not g.identidad.puede(*roles):
                 return jsonify(error=f"Acción permitida sólo a: {', '.join(roles)}"), 403
             return vista(*args, **kwargs)
@@ -112,9 +125,10 @@ def identidad_web() -> Identidad | None:
     if not token:
         return None
     try:
-        return leer_token(token)
+        ident = leer_token(token)
     except jwt.InvalidTokenError:
         return None
+    return ident if sigue_vigente(ident) else None
 
 
 def web_requiere(*roles: str):
@@ -124,7 +138,11 @@ def web_requiere(*roles: str):
         def envoltura(*args, **kwargs):
             ident = identidad_web()
             if ident is None:
-                return redirect(url_for("web.login", siguiente=request.path))
+                # Sólo se vuelve a páginas GET: regresar a un POST (p. ej. /logout)
+                # tras el login terminaría en "405 Método no permitido"
+                if request.method == "GET":
+                    return redirect(url_for("web.login", siguiente=request.path))
+                return redirect(url_for("web.login"))
             g.identidad = ident
             if request.method == "POST":
                 enviado = request.form.get("csrf", "")

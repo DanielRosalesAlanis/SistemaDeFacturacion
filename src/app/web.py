@@ -3,6 +3,7 @@
 Jinja escapa automáticamente todo lo que se imprime (protección contra XSS).
 La sesión es el mismo JWT de la API guardado en una cookie HttpOnly y
 SameSite=Strict; cada formulario POST lleva un token CSRF."""
+import hmac
 from datetime import date
 
 from flask import (Blueprint, current_app, flash, g, make_response, redirect, render_template,
@@ -14,16 +15,28 @@ from .db import ErrorNegocio
 from .esquemas import (Cierre, ClienteNuevo, Concepto, Emision, Login, NuevoPrecio, Pago,
                        ServicioNuevo, TasaImpuesto, UsuarioNuevo, ValorCaracteristica,
                        errores_legibles)
-from .seguridad import COOKIE, identidad_web, web_requiere
+from .seguridad import COOKIE, identidad_web, token_csrf, web_requiere
 
 web = Blueprint("web", __name__)
 FACTURAR, COBRAR, GERENTE = op.FACTURAR, op.COBRAR, op.GERENTE
 
 
+# Campos de control del formulario, no datos del modelo (los modelos usan extra="forbid")
+CAMPOS_DE_CONTROL = {"csrf", "volver_a"}
+
+
 def formulario(modelo, **extra):
-    datos = {k: (v if v != "" else None) for k, v in request.form.items() if k != "csrf"}
+    datos = {k: (v if v != "" else None) for k, v in request.form.items() if k not in CAMPOS_DE_CONTROL}
     datos.update(extra)
     return modelo.model_validate(datos)
+
+
+def entero(campo: str) -> int:
+    """Id numérico de un <select>; un valor alterado no debe terminar en error 500."""
+    valor = request.form.get(campo, "")
+    if not valor.isdigit() or not 0 < int(valor) < 2_147_483_647:
+        raise ErrorNegocio(f"{campo}: valor inválido", 400)
+    return int(valor)
 
 
 def ejecutar(funcion, mensaje_ok: str | None = None):
@@ -49,8 +62,8 @@ def volver(por_defecto: str):
 @web.route("/login", methods=["GET", "POST"])
 def login():
     siguiente = request.values.get("siguiente", "/")
-    if not siguiente.startswith("/") or siguiente.startswith("//"):
-        siguiente = "/"                                     # evita redirecciones abiertas
+    if not siguiente.startswith("/") or siguiente.startswith("//") or siguiente.startswith("/logout"):
+        siguiente = "/"                                     # evita redirecciones abiertas y volver a /logout
     if request.method == "GET":
         if identidad_web():
             return redirect(siguiente)
@@ -71,9 +84,19 @@ def login():
     return resp
 
 
-@web.post("/logout")
-@web_requiere()
+@web.route("/logout", methods=["GET", "POST"])
 def logout():
+    """Cerrar sesión no exige una sesión válida: si ya expiró, sólo se borra
+    la cookie. Con sesión activa se exige POST con token CSRF, para que un
+    enlace de otro sitio no pueda cerrarla; un GET (historial, pestaña vieja)
+    regresa al panel en lugar de mostrar 405."""
+    ident = identidad_web()
+    if ident is not None:
+        if request.method == "GET":
+            return redirect(url_for("web.panel"))
+        if not hmac.compare_digest(request.form.get("csrf", ""), token_csrf(ident)):
+            flash("La sesión del formulario expiró; inténtalo de nuevo.", "error")
+            return redirect(url_for("web.panel"))
     resp = make_response(redirect(url_for("web.login")))
     resp.delete_cookie(COOKIE, path="/")
     return resp
@@ -130,7 +153,7 @@ def estado_servicio(id_servicio):
 @web_requiere(*GERENTE)
 def caracteristica(id_servicio):
     def asignar():
-        id_car = int(request.form.get("id_caracteristica") or 0)
+        id_car = entero("id_caracteristica")
         valor = ValorCaracteristica.model_validate({"valor": request.form.get("valor", "")}).valor
         op.asignar_caracteristica(g.identidad, id_servicio, id_car, valor)
     ejecutar(asignar, "Característica asignada")
@@ -163,7 +186,7 @@ def facturas():
 @web.post("/facturas")
 @web_requiere(*FACTURAR)
 def crear_factura():
-    id_factura, ok = ejecutar(lambda: op.crear_factura(g.identidad, int(request.form.get("id_cliente") or 0)),
+    id_factura, ok = ejecutar(lambda: op.crear_factura(g.identidad, entero("id_cliente")),
                               "Borrador creado")
     return redirect(url_for("web.factura", id_factura=id_factura) if ok else url_for("web.facturas"))
 

@@ -127,9 +127,10 @@ def traducir(e: Exception) -> ErrorNegocio:
         log.warning("Conexión con la base perdida: %s", e)
         return ErrorNegocio("Se perdió la conexión con la base de datos; intenta de nuevo", 503)
     codigo = getattr(e, "sqlstate", None) or "desconocido"
+    # El SQLSTATE (p. ej. 42883 = función inexistente) sólo va al log de
+    # CloudWatch; al cliente no se le dice qué motor ni qué falló.
     log.exception("Error de base de datos no previsto (SQLSTATE %s)", codigo)
-    # El SQLSTATE no expone datos y permite diagnosticar (p. ej. 42883 = función inexistente)
-    return ErrorNegocio(f"Error interno de la base de datos (código {codigo})", 500)
+    return ErrorNegocio("Error interno; intenta de nuevo más tarde", 500)
 
 
 def llamar(nombre: str, *args) -> dict:

@@ -26,8 +26,9 @@ def configuracion() -> dict:
         "JWT_SECRETO": secreto,
         "JWT_MINUTOS": int(os.environ.get("JWT_MINUTOS", "60")),
         "COOKIE_SEGURA": os.environ.get("COOKIE_SEGURA", "true").lower() != "false",
-        "DDB_TABLA_EVENTOS": os.environ.get("DDB_TABLA_EVENTOS", ""),
-        "AWS_REGION": os.environ.get("AWS_REGION", "us-east-1"),
+        # Muestra los usuarios de demostración en el login; apagado salvo que se pida
+        "MOSTRAR_CUENTAS_DEMO": os.environ.get("MOSTRAR_CUENTAS_DEMO", "false").lower() == "true",
+        "AWS_REGION":os.environ.get("AWS_REGION", "us-east-1"),
         "POOL_MAX": int(os.environ.get("POOL_MAX", "5")),
         "MAX_CONTENT_LENGTH": 256 * 1024,          # cuerpo máximo de una petición
         "JSON_SORT_KEYS": False,
